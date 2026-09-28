@@ -316,7 +316,7 @@ const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_
   BLAZE_POWDER: 163, ENDER_PEARL: 164, EYE_OF_ENDER: 165,
   GHAST_TEAR: 166, NETHER_BRICK_ITEM: 167, REDSTONE: 168,
   STRING: 169, FISHING_ROD: 170, RAW_FISH: 171, COOKED_FISH: 172,
-  BOTTLE: 173, WATER_BOTTLE: 174, P_HEAL: 175, P_REGEN: 176, P_SPEED: 177, P_FIRE: 178, P_NIGHT: 179, P_STRENGTH: 180, P_JUMP: 181, SHEARS: 182, BONE_MEAL: 183, GOLDEN_APPLE: 184, COMPASS: 185, CLOCK: 186 };
+  BOTTLE: 173, WATER_BOTTLE: 174, P_HEAL: 175, P_REGEN: 176, P_SPEED: 177, P_FIRE: 178, P_NIGHT: 179, P_STRENGTH: 180, P_JUMP: 181, SHEARS: 182, BONE_MEAL: 183, GOLDEN_APPLE: 184, COMPASS: 185, CLOCK: 186, SADDLE: 187 };
 // 갑옷: 132부터 [가죽, 철, 다이아몬드] × [투구, 흉갑, 레깅스, 부츠]
 const ARMOR_SET = [['leather', '가죽', 5, [1, 3, 2, 1]], ['iron', '철', 15, [2, 6, 5, 2]], ['diamond', '다이아몬드', 33, [3, 8, 6, 3]]];
 const ARMOR_PART = ['투구', '흉갑', '레깅스', '부츠'], ARMOR_BASE_DUR = [11, 16, 15, 13], ARMOR_COST = [5, 8, 7, 4];
@@ -558,6 +558,7 @@ ITEMS[I.NETHER_BRICK_ITEM] = { name: '네더 벽돌 조각', stack: 64 };
 ITEMS[I.REDSTONE] = { name: '레드스톤 가루', stack: 64, placeAs: B.DUST_OFF };
 ITEMS[I.STRING] = { name: '실', stack: 64 };
 ITEMS[I.GOLDEN_APPLE] = { name: '황금 사과', stack: 64, food: 4, sat: 9.6, regen: 10 };
+ITEMS[I.SADDLE] = { name: '안장', stack: 1 };
 ITEMS[I.COMPASS] = { name: '나침반', stack: 1, gadget: 'compass' };
 ITEMS[I.CLOCK] = { name: '시계', stack: 1, gadget: 'clock' };
 ITEMS[I.BONE_MEAL] = { name: '뼛가루', stack: 64, fertilizer: true };
@@ -635,6 +636,7 @@ RECIPES.push(
   { out: [I.BONE_MEAL, 3], in: [[I.BONE, 1]] },
   { out: [I.GOLDEN_APPLE, 1], in: [[I.APPLE, 1], [I.GOLD_INGOT, 8]], table: true },
   { out: [I.COMPASS, 1], in: [[I.IRON_INGOT, 4], [I.REDSTONE, 1]], table: true },
+  { out: [I.SADDLE, 1], in: [[I.LEATHER, 5], [I.IRON_INGOT, 1]], table: true },
   { out: [I.CLOCK, 1], in: [[I.GOLD_INGOT, 4], [I.REDSTONE, 1]], table: true },
   ...WOOL_COLORS.map(([, , ing], k) => ({ out: [B.CWOOL + k, ing.length], in: [[B.WOOL, ing.length], ...ing] })),
   { out: [B.BREW_STAND, 1], in: [[I.BLAZE_ROD, 1], [B.COBBLE, 3]], table: true },
@@ -665,7 +667,7 @@ const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [B.BIRCH_LOG, 1.5], [I
 const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.CHEST, B.BED, B.WOOL, B.TNT, B.BEDROCK,
   B.SANDSTONE, B.BIRCH_LOG, B.STONE_BRICK, B.PLANK_SLAB, B.COBBLE_SLAB, B.STONE_SLAB, B.PLANK_STAIRS, B.COBBLE_STAIRS, B.FENCE, B.ICE, B.CACTUS, B.FLOWER_RED, B.FLOWER_YELLOW,
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
-  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, I.GOLDEN_APPLE, I.COMPASS, I.CLOCK, ...WOOL_COLORS.map((_, k) => B.CWOOL + k), I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
+  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, I.GOLDEN_APPLE, I.COMPASS, I.CLOCK, I.SADDLE, ...WOOL_COLORS.map((_, k) => B.CWOOL + k), I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
   I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD,
   B.PISTON + 3, B.STICKY + 3, B.REDSTONE_ORE, B.LEVER_OFF, B.BUTTON_OFF, B.PLATE_OFF, B.RS_TORCH, B.LAMP_OFF, B.REDSTONE_BLOCK, I.REDSTONE,
@@ -724,7 +726,8 @@ function writeSave() {
   for (const [k, arr] of chests) obj.chests[k] = arr.map(ser);
   const dump = m => { const o = {}; for (const [k, v] of m) if (v.size) o[k] = [...v]; return o; };
   obj.edits = dump(editsByDim.overworld); obj.editsN = dump(editsByDim.nether); obj.editsE = dump(editsByDim.end);
-  obj.pets = mobs.filter(m => m.tamed).map(m => [+m.pos.x.toFixed(1), +m.pos.y.toFixed(1), +m.pos.z.toFixed(1), m.hp]);
+  obj.horses = dim === 'overworld' ? mobs.filter(m => m.type === 'horse' && m.tamed).map(horseData) : (owHorses || []);
+  obj.pets = mobs.filter(m => m.tamed && m.type === 'wolf').map(m => [+m.pos.x.toFixed(1), +m.pos.y.toFixed(1), +m.pos.z.toFixed(1), m.hp]);
   obj.ach = [...achDone];
   obj.weather = [weather.target, Math.round(weather.timer), weather.thunder];
   obj.dim = dim; obj.dragonDead = endState.dragonDead; obj.crystalsGone = [...endState.crystalsGone];
@@ -1899,6 +1902,9 @@ function drawItemIcon(g, id) {
       else g.fillStyle = 'rgba(210,230,245,.35)', g.fillRect(x * 2, y * 2, 2, 2);
     }
     if (liquid) px(6, 9, [255, 255, 255], 0);
+  } else if (id === I.SADDLE) {
+    for (let y = 4; y < 12; y++) for (let x = 2; x < 14; x++) { const top = y < 7 && (x < 4 || x > 11); if (!top) px(x, y, y === 4 || y === 11 ? [90, 50, 26] : [140, 82, 44], 12); }
+    for (let y = 11; y < 15; y++) { px(3, y, [70, 70, 70]); px(12, y, [70, 70, 70]); }
   } else if (id === I.GOLDEN_APPLE) {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { if (Math.hypot(x - 7.5, y - 9) < 5.6) px(x, y, x < 6 && y < 8 ? [255, 250, 180] : [236, 196, 50], 14); }
     px(8, 2, [110, 80, 40]); px(8, 3, [110, 80, 40]); px(9, 2, [80, 160, 60]); px(10, 2, [80, 160, 60]);
@@ -2508,7 +2514,7 @@ function physics(dt) {
   const p = player.pos;
   if (player.riding) {
     const b = player.riding;
-    p.set(b.pos.x, b.pos.y - 0.25, b.pos.z);
+    p.set(b.pos.x, b.pos.y + (b.def ? b.def.seat - 0.25 : -0.25), b.pos.z);
     player.vel.set(0, 0, 0); player.onGround = true; player.peakY = p.y; player.inWater = false;
     player.headInWater = getBlock(Math.floor(p.x), Math.floor(p.y + EYE), Math.floor(p.z)) === B.WATER;
     return;
@@ -2854,6 +2860,13 @@ const MOBTEX = {
     return [240, 162, 160];
   }, 2),
   zSkin: makeCanvasTex(8, 8, () => [82, 140, 70], 3),
+  horse0: makeCanvasTex(8, 8, (x, y) => (x * 5 + y * 3) % 11 === 0 ? [110, 72, 40] : [140, 94, 54], 36),
+  horse1: makeCanvasTex(8, 8, (x, y) => (x * 5 + y * 3) % 11 === 0 ? [200, 200, 196] : [232, 230, 224], 37),
+  horse2: makeCanvasTex(8, 8, (x, y) => (x * 5 + y * 3) % 11 === 0 ? [50, 44, 40] : [34, 30, 28], 38),
+  mane: makeCanvasTex(4, 4, () => [40, 30, 22], 39),
+  saddle: makeCanvasTex(4, 4, (x, y) => y === 0 ? [90, 50, 26] : [130, 76, 40], 40),
+  golem: makeCanvasTex(8, 8, (x, y) => (x * 3 + y * 7) % 9 === 0 ? [150, 144, 132] : (x + y * 5) % 13 === 0 ? [90, 120, 60] : [206, 198, 184], 41),
+  golemFace: makeCanvasTex(8, 8, (x, y) => (y === 3 && (x === 2 || x === 5)) ? [140, 30, 20] : (y >= 4 && y <= 6 && x >= 3 && x <= 4) ? [180, 170, 156] : [206, 198, 184], 42),
   wSkin: makeCanvasTex(8, 8, (x, y) => (x * 3 + y) % 7 === 0 ? [170, 166, 160] : [214, 210, 204], 33),
   wFace: makeCanvasTex(8, 8, (x, y) => (y === 3 && (x === 1 || x === 6)) ? [30, 30, 30] : (y >= 5 && x >= 3 && x <= 4) ? [40, 36, 34] : [214, 210, 204], 34),
   collar: makeCanvasTex(2, 2, () => [200, 30, 30], 35),
@@ -2934,6 +2947,8 @@ const MOB = {
   pig:      { hp: 10, hw: 0.45, h: 0.95, passive: true, speed: 1.1, breed: true, drops: [[I.PORK, 1, 3]] },
   cow:      { hp: 10, hw: 0.45, h: 1.4, passive: true, speed: 1.0, breed: true, drops: [[I.LEATHER, 0, 2], [I.BEEF, 1, 3]] },
   sheep:    { hp: 8, hw: 0.45, h: 1.3, passive: true, speed: 1.0, breed: true, drops: [[B.WOOL, 1, 1], [I.MUTTON, 1, 2]] },
+  horse:    { hp: 20, hw: 0.65, h: 1.6, passive: true, speed: 1.3, seat: 1.3, drops: [[I.LEATHER, 0, 2]] },
+  golem:    { hp: 100, hw: 0.7, h: 2.7, speed: 1.6, neutral: true, melee: true, dmg: 10, guard: true, armsDown: true, drops: [[I.IRON_INGOT, 3, 5]] },
   wolf:     { hp: 8, hw: 0.3, h: 0.85, speed: 2.8, neutral: true, melee: true, dmg: 3, drops: [] },
   zombie:   { hp: 20, hw: 0.3, h: 1.95, speed: 2.4, burns: true, melee: true, dmg: 3, drops: [[I.FLESH, 0, 2]] },
   skeleton: { hp: 20, hw: 0.3, h: 1.95, speed: 2.2, burns: true, drops: [[I.BONE, 0, 2], [I.ARROW, 0, 2]] },
@@ -2948,7 +2963,7 @@ const MOB = {
   spider:   { hp: 16, hw: 0.65, h: 0.9, speed: 2.9, melee: true, dmg: 2, dayNeutral: true, climbs: true, drops: [[I.STRING, 0, 2]] },
 };
 const HOSTILE = ['zombie', 'zombie', 'zombie', 'skeleton', 'skeleton', 'creeper', 'creeper', 'enderman', 'spider', 'spider'];
-const MOB_NAME = { zombie: '좀비', piglin: '좀비 피글린', enderman: '엔더맨', spider: '거미', wolf: '늑대' };
+const MOB_NAME = { golem: '철 골렘', zombie: '좀비', piglin: '좀비 피글린', enderman: '엔더맨', spider: '거미', wolf: '늑대' };
 const MEATS = new Set([I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH]);
 function buildMobModel(type) {
   const g = new THREE.Group(), legs = [], arms = [], mats = [];
@@ -3038,6 +3053,22 @@ function buildMobModel(type) {
     box(8, 4, 4, robe, 0, 19, 4); // 팔짱
     box(8, 10, 8, faced(skin, face), 0, 29, 0);
     box(2, 4, 2, skin, 0, 26, 5); // 코
+  } else if (type === 'horse') {
+    const variant = Math.random() * 3 | 0, skin = mat(MOBTEX['horse' + variant]), mane = mat(MOBTEX.mane), sad = mat(MOBTEX.saddle);
+    g.userData.variant = variant;
+    box(10, 10, 22, skin, 0, 17, 0);
+    const neck = box(6, 12, 7, skin, 0, 25, 11); neck.rotation.x = 0.5;
+    box(6, 6, 11, skin, 0, 30, 16); box(2, 10, 5, mane, 0, 27, 9).rotation.x = 0.5;
+    box(2, 3, 1, skin, -2, 34, 13); box(2, 3, 1, skin, 2, 34, 13);
+    const tail = box(3, 12, 3, mane, 0, 16, -12); tail.rotation.x = 0.4;
+    g.userData.saddle = box(10.4, 2, 9, sad, 0, 22.5, 1); g.userData.saddle.visible = false;
+    for (const [x, z] of [[-3, -8], [3, -8], [-3, 8], [3, 8]]) limb(x, 12, z, 4, 12, 4, skin, legs);
+  } else if (type === 'golem') {
+    const skin = mat(MOBTEX.golem), face = mat(MOBTEX.golemFace);
+    limb(-4, 16, 0, 6, 16, 5, skin, legs); limb(4, 16, 0, 6, 16, 5, skin, legs);
+    box(18, 12, 11, skin, 0, 34, 0); box(9, 6, 7, skin, 0, 25, 0);
+    limb(-11, 40, 0, 4, 30, 6, skin, arms); limb(11, 40, 0, 4, 30, 6, skin, arms);
+    box(8, 10, 8, faced(skin, face), 0, 45, -1); box(2, 4, 2, skin, 0, 42, 4);
   } else if (type === 'wolf') {
     const skin = mat(MOBTEX.wSkin), face = mat(MOBTEX.wFace), collar = mat(MOBTEX.collar);
     box(6, 6, 9, skin, 0, 10, -1); box(8, 7, 6, skin, 0, 10.5, 4);
@@ -3083,6 +3114,7 @@ function spawnMob(type, x, y, z) {
   return m;
 }
 function removeMob(m) {
+  if (player.riding === m) dismount();
   scene.remove(m.g);
   m.mats.forEach(x => x.dispose());
   const i = mobs.indexOf(m);
@@ -3227,6 +3259,44 @@ function lineOfSight(a, b) {
   return true;
 }
 const wrapAngle = a => Math.atan2(Math.sin(a), Math.cos(a));
+// 말 타기: 길들이고 안장을 얹은 말은 조종, 아니면 제멋대로 날뜀
+function rideHorse(m, dt) {
+  let move = 0;
+  if (m.tamed && m.saddled) {
+    let fwd = -touchMove.y;
+    if (keys.has('KeyW')) fwd += 1;
+    if (keys.has('KeyS')) fwd -= 1;
+    fwd = Math.max(-0.3, Math.min(1, fwd));
+    m.yaw = player.yaw + Math.PI; move = fwd * 8.5;
+    if ((keys.has('Space') || touchState.jump) && m.onGround) m.vel.y = 10;
+  } else {
+    m.tameT += dt; m.wander -= dt;
+    if (m.wander <= 0) { m.targetYaw = Math.random() * Math.PI * 2; m.wander = 0.4; }
+    m.yaw += wrapAngle(m.targetYaw - m.yaw) * Math.min(1, dt * 6); move = 3;
+    if (m.onGround && Math.random() < dt * 2) m.vel.y = 6;
+    if (!m.tamed && m.tameT > 2) {
+      m.tameT = 0;
+      if (Math.random() < 0.3) { m.tamed = true; dismount(); spawnHearts(m.pos.x, m.pos.y + 2, m.pos.z, 6); toast('말을 길들였습니다! 안장(가죽 5 + 철 1)을 얹으면 탈 수 있습니다'); }
+      else { dismount(); sfxMob('horse', 'hurt', 0); toast('말이 떨어뜨렸습니다. 다시 타 보세요'); }
+      return;
+    }
+    if (m.tamed && m.tameT > 1.5) { dismount(); return; }
+  }
+  const k = Math.min(1, dt * (m.onGround ? 8 : 2));
+  m.vel.x += (Math.sin(m.yaw) * move - m.vel.x) * k;
+  m.vel.z += (Math.cos(m.yaw) * move - m.vel.z) * k;
+  m.vel.y = Math.max(m.vel.y - 28 * dt, -40);
+  const inBlock = getBlock(Math.floor(m.pos.x), Math.floor(m.pos.y + 0.4), Math.floor(m.pos.z));
+  if (inBlock === B.WATER) m.vel.y = Math.min(m.vel.y + 40 * dt, 2.2);
+  const wall = moveEntity(m, dt);
+  if (wall && move > 0 && m.onGround) m.vel.y = 8.2;
+  const spd = Math.hypot(m.vel.x, m.vel.z);
+  m.phase += spd * dt * 3;
+  const swing = Math.sin(m.phase) * 0.8 * Math.min(1, spd / 2);
+  m.legs.forEach((l, i) => l.rotation.x = (i === 0 || i === 3) ? swing : -swing);
+  m.g.position.copy(m.pos); m.g.rotation.y = m.yaw;
+  if (m.onGround) player.peakY = player.pos.y;
+}
 function updateMob(m, dt) {
   m.t = (m.t || 0) + dt;
   m.hurt -= dt; m.hurtCd -= dt; m.attackCd -= dt;
@@ -3240,7 +3310,8 @@ function updateMob(m, dt) {
     m.g.position.copy(m.pos);
     return;
   }
-  if (dist > 90 && !m.tamed) { removeMob(m); return; }
+  if (dist > 90 && !m.tamed && !m.def.guard) { removeMob(m); return; }
+  if (player.riding === m) { rideHorse(m, dt); return; }
   if (m.baby > 0) { m.baby -= dt; if (m.baby <= 0) { m.baby = 0; m.hw = m.def.hw; m.h = m.def.h; } }
   if (m.breedCd > 0) m.breedCd -= dt;
   if (m.sheared > 0) { m.sheared -= dt; if (m.sheared <= 0) { m.sheared = 0; m.g.userData.wool.visible = true; } }
@@ -3277,7 +3348,7 @@ function updateMob(m, dt) {
       }
     }
   }
-  if (m.tamed) {
+  if (m.tamed && m.type === 'wolf') {
     // 길들인 늑대: 싸울 상대가 있으면 공격, 없으면 플레이어를 따라다님
     const t = m.target;
     if (t && (t.hp <= 0 || !mobs.includes(t) || t.pos.distanceTo(m.pos) > 24)) m.target = null;
@@ -3292,9 +3363,11 @@ function updateMob(m, dt) {
     } else if (dist > 3.5) { m.targetYaw = Math.atan2(dxp, dzp); move = dist > 8 ? 4 : 2.8; }
     else move = wander(0.6) * 0.5;
   }
+  m.guard = m.def.guard && !m.angry;
   const calm = m.def.neutral || (m.def.dayNeutral && light > 0.6 && dim === 'overworld');
   const hunting = !m.def.passive && mode === 'survival' && !player.dead && dist < 20 && (!calm || m.angry);
-  if (m.tamed || (m.love > 0 && move > 0)) { /* 위에서 정함 */ }
+  if (m.guard && guardTarget(m, dt)) { move = m.guardMove; }
+  else if ((m.tamed && m.type === 'wolf') || (m.love > 0 && move > 0)) { /* 위에서 정함 */ }
   else if (m.home && Math.hypot(m.home.x - m.pos.x, m.home.z - m.pos.z) > 18 && m.flee <= 0) {
     m.targetYaw = Math.atan2(m.home.x - m.pos.x, m.home.z - m.pos.z); move = m.def.speed;
   } else if (m.def.passive) {
@@ -3592,7 +3665,8 @@ function switchDim(nd, x, y, z) {
   while (boats.length) removeBoat(boats[0]);
   for (const c of chunks.values()) disposeMeshes(c);
   chunks.clear(); lcCache = null; lastCenter = null; wanted = [];
-  const pets = mobs.filter(m => m.tamed).map(m => m.hp);
+  const pets = mobs.filter(m => m.tamed && m.type === 'wolf').map(m => m.hp);
+  if (dim === 'overworld') owHorses = mobs.filter(m => m.type === 'horse' && m.tamed).map(horseData);
   while (mobs.length) removeMob(mobs[0]);
   while (drops.length) removeDrop(0);
   for (const a of arrows) scene.remove(a.mesh);
@@ -3605,6 +3679,7 @@ function switchDim(nd, x, y, z) {
   dim = nd; edits = editsByDim[nd];
   if (nd !== 'overworld') grant(nd);
   player.pos.set(x, y, z); player.vel.set(0, 0, 0); player.peakY = y; player.burn = 0;
+  if (nd === 'overworld' && owHorses) { owHorses.forEach(spawnHorseFrom); owHorses = null; }
   for (const hp of pets) { const w = spawnMob('wolf', x + (Math.random() - 0.5) * 2, y + 0.3, z + (Math.random() - 0.5) * 2); tameWolf(w); w.hp = hp; }
   applyDimVisuals();
   preload();
@@ -3862,7 +3937,7 @@ function spawnTick(dt) {
   if (spawnTimer > 0) return;
   spawnTimer = 1;
   let passive = 0, hostile = 0;
-  for (const m of mobs) if (m.def.village || m.def.boss || m.def.still) continue; else if (m.def.passive) passive++; else hostile++;
+  for (const m of mobs) if (m.def.village || m.def.boss || m.def.still || m.def.guard || m.tamed) continue; else if (m.def.passive) passive++; else hostile++;
   if (dim === 'nether') { spawnNether(hostile); return; }
   if (dim === 'end') { spawnEnd(hostile); return; }
   const pick = list => list[Math.random() * list.length | 0];
@@ -3882,7 +3957,10 @@ function spawnTick(dt) {
       return;
     }
   };
-  if (passive < 12 && Math.random() < 0.6) tryAt(pick(['pig', 'cow', 'sheep']));
+  if (passive < 12 && Math.random() < 0.6) {
+    const bio = biomeAt(Math.floor(player.pos.x), Math.floor(player.pos.z));
+    tryAt(pick(bio === BIO.PLAINS ? ['pig', 'cow', 'sheep', 'horse'] : ['pig', 'cow', 'sheep']));
+  }
   if (Math.random() < 0.06 && mobs.filter(m => m.type === 'wolf' && !m.tamed).length < 4) {
     const bio = biomeAt(Math.floor(player.pos.x), Math.floor(player.pos.z));
     if (bio === BIO.FOREST || bio === BIO.SNOW) tryAt('wolf');
@@ -3890,7 +3968,16 @@ function spawnTick(dt) {
   // 가까운 마을에 주민이 3명보다 적으면 우물 근처에 생김
   for (const v of villagesNear(player.pos.x, player.pos.z, player.pos.x, player.pos.z, 70)) {
     if (Math.hypot(v.x - player.pos.x, v.z - player.pos.z) > 70 || !chunkReady(v.x, v.z)) continue;
-    if (mobs.filter(m => m.home === v).length >= 3) continue;
+    if (!mobs.some(m => m.type === 'golem' && Math.hypot(m.pos.x - v.x, m.pos.z - v.z) < 40) && Math.random() < 0.3) {
+      const gx = Math.floor(v.x + 3), gz = Math.floor(v.z + 3);
+      for (let y = CH - 2; y > 1; y--) {
+        const id = getBlock(gx, y, gz);
+        if (id === B.AIR || !SOLID[id]) continue;
+        if (getBlock(gx, y + 1, gz) === B.AIR && getBlock(gx, y + 2, gz) === B.AIR && getBlock(gx, y + 3, gz) === B.AIR) spawnMob('golem', gx + 0.5, y + 1, gz + 0.5).home = v;
+        break;
+      }
+    }
+    if (mobs.filter(m => m.home === v && m.type === 'villager').length >= 3) continue;
     const x = Math.floor(v.x + (Math.random() - 0.5) * 16), z = Math.floor(v.z + (Math.random() - 0.5) * 16);
     for (let y = CH - 2; y > 1; y--) {
       const id = getBlock(x, y, z);
@@ -4040,6 +4127,11 @@ function sfxMob(type, kind, dist) {
     sfx.roar(kind === 'hurt' ? 0.6 : 0.4);
   } else if (type === 'crystal') {
     sfxTone(1200, 0.2, { vol: 0.06 * v });
+  } else if (type === 'horse') {
+    sfxTone(520 * p, 0.5, { type: 'sawtooth', vol: 0.06 * v, to: 300 * p, lp: 1400, attack: 0.03 });
+    sfxTone(600 * p, 0.3, { type: 'sawtooth', vol: 0.04 * v, to: 420 * p, lp: 1400, delay: 0.1 });
+  } else if (type === 'golem') {
+    if (kind === 'hurt') sfxNoise(0.25, 700, { q: 2, vol: 0.3 * v });
   } else if (type === 'wolf') {
     if (kind === 'hurt') sfxTone(700 * p, 0.15, { type: 'triangle', vol: 0.12 * v, to: 500 * p });
     else { sfxTone(420 * p, 0.08, { type: 'square', vol: 0.08 * v, lp: 1200 }); sfxTone(380 * p, 0.1, { type: 'square', vol: 0.08 * v, lp: 1200, delay: 0.15 }); }
@@ -4189,7 +4281,7 @@ function drawMap() {
   }
   mapCtx.putImageData(mapImg, 0, 0);
   // 길들인 늑대(초록 점)와 플레이어(방향 화살표)
-  for (const m of mobs) if (m.tamed) { mapCtx.fillStyle = '#6f6'; mapCtx.fillRect(Math.floor(m.pos.x) - px + 32, Math.floor(m.pos.z) - pz + 32, 1, 1); }
+  for (const m of mobs) if (m.tamed && m.type === 'wolf') { mapCtx.fillStyle = '#6f6'; mapCtx.fillRect(Math.floor(m.pos.x) - px + 32, Math.floor(m.pos.z) - pz + 32, 1, 1); }
   mapCtx.save(); mapCtx.translate(32.5, 32.5); mapCtx.rotate(-player.yaw);
   mapCtx.fillStyle = '#fff'; mapCtx.strokeStyle = '#000'; mapCtx.lineWidth = 0.5;
   mapCtx.beginPath(); mapCtx.moveTo(0, -3.5); mapCtx.lineTo(2.5, 2.5); mapCtx.lineTo(0, 1.2); mapCtx.lineTo(-2.5, 2.5); mapCtx.closePath(); mapCtx.fill(); mapCtx.stroke();
@@ -4699,6 +4791,7 @@ function useBucket(s, info) {
   refreshInvUI(); scheduleSave();
 }
 function attack(m) {
+  if (m === player.riding) return;
   swingHand();
   const s = heldItem(), it = s ? ITEMS[s.id] : null;
   const dmg = (it && it.dmg ? it.dmg : 1) + 1.25 * enchLv(s, 'sharpness') + (player.fx.strength > 0 ? 3 : 0);
@@ -4722,6 +4815,14 @@ function interactAnimal(m) {
     spawnDrop(B.WOOL, 1 + (Math.random() * 3 | 0), m.pos.x, m.pos.y + 1, m.pos.z);
     sfxNoise(0.12, 3000, { q: 2, vol: 0.2 }); wearSelected(1); swingHand(); return true;
   }
+  if (m.type === 'horse' && !m.baby) {
+    if (m.tamed && !m.saddled && id === I.SADDLE) { m.saddled = true; m.g.userData.saddle.visible = true; consumeSelected(); sfx.equip(); return true; }
+    if (!player.riding) {
+      player.riding = m; player.flying = false; player.vel.set(0, 0, 0); m.tameT = 0;
+      toast(!m.tamed ? '말이 날뛰고 있습니다… 버티면 길들일 수 있습니다' : m.saddled ? 'W로 달리고 Space로 점프, 시점으로 방향. Shift로 내립니다' : '안장을 얹어야 조종할 수 있습니다');
+      return true;
+    }
+  }
   if (m.type === 'wolf' && !m.tamed && id === I.BONE && !m.angry) {
     consumeSelected(); swingHand();
     if (Math.random() < 0.34) { tameWolf(m); toast('늑대를 길들였습니다'); grant('wolf'); }
@@ -4733,6 +4834,36 @@ function interactAnimal(m) {
   }
   return false;
 }
+function horseData(m) { return [+m.pos.x.toFixed(1), +m.pos.y.toFixed(1), +m.pos.z.toFixed(1), m.hp, m.saddled ? 1 : 0, m.g.userData.variant]; }
+let owHorses = null;
+function spawnHorseFrom([x, y, z, hp, saddled, variant]) {
+  const m = spawnMob('horse', x, y, z);
+  m.tamed = true; m.hp = hp;
+  if (variant !== undefined && variant !== m.g.userData.variant) { m.mats[0].map = MOBTEX['horse' + variant]; m.g.userData.variant = variant; }
+  if (saddled) { m.saddled = true; m.g.userData.saddle.visible = true; }
+}
+// 철 골렘: 마을을 지키며 주변 몬스터를 공격
+function guardTarget(m, dt) {
+  const t = m.target;
+  if (t && (t.hp <= 0 || !mobs.includes(t) || t.pos.distanceTo(m.pos) > 20)) m.target = null;
+  if (!m.target) {
+    m.scanT = (m.scanT || 0) - dt;
+    if (m.scanT <= 0) {
+      m.scanT = 1;
+      let best = null, bd = 16;
+      for (const o of mobs) if (!o.def.passive && !o.def.guard && !o.tamed && !o.def.neutral && !o.def.flying) { const d = o.pos.distanceTo(m.pos); if (d < bd) { bd = d; best = o; } }
+      m.target = best;
+    }
+  }
+  if (!m.target) return false;
+  const tx = m.target.pos.x - m.pos.x, tz = m.target.pos.z - m.pos.z, td = Math.hypot(tx, tz);
+  m.targetYaw = Math.atan2(tx, tz); m.guardMove = td > 1.2 ? m.def.speed * 1.4 : 0;
+  if (td < 1.8 + m.target.hw && m.attackCd <= 0) {
+    m.target.hurtCd = 0; hurtMob(m.target, 10, { x: tx / (td || 1), z: tz / (td || 1) }); m.target.vel.y = 9; m.attackCd = 1.2;
+    sfxNoise(0.2, 300, { type: 'lowpass', vol: 0.4 });
+  }
+  return true;
+}
 function tameWolf(m) {
   m.tamed = true; m.angry = false; m.hp = MOB.wolf.hp * 2.5; m.target = null;
   m.g.userData.collar.visible = true;
@@ -4740,7 +4871,7 @@ function tameWolf(m) {
 }
 function wolvesDefend(enemy) {
   if (!enemy || enemy.tamed || enemy.def.boss) return;
-  for (const w of mobs) if (w.tamed && w !== enemy && w.pos.distanceTo(player.pos) < 24) w.target = enemy;
+  for (const w of mobs) if (w.tamed && w.type === 'wolf' && w !== enemy && w.pos.distanceTo(player.pos) < 24) w.target = enemy;
 }
 function useItem() {
   const hit = raycast(6);
@@ -6122,6 +6253,7 @@ selectSlot(0);
 updateHearts();
 setTimeout(() => {
   preload();
+  if (save && save.horses) { if (dim === 'overworld') save.horses.forEach(spawnHorseFrom); else owHorses = save.horses; }
   if (save && save.pets) for (const [x, y, z, hp] of save.pets) { const w = spawnMob('wolf', x, y, z); tameWolf(w); w.hp = hp; }
   if (save && save.boats) {
     if (dim === 'overworld') for (const [x, y, z, yaw] of save.boats) spawnBoat(x, y, z, yaw);
