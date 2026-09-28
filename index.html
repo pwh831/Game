@@ -227,6 +227,7 @@
       <label class="check"><input id="set-invert" type="checkbox"> 스와이프 방향 반대로</label>
       <label for="set-volume">소리 크기 <output id="set-volume-val">70%</output></label>
       <input id="set-volume" type="range" min="0" max="1" step="0.05">
+      <label class="check"><input id="set-music" type="checkbox"> 배경 음악</label>
     </div>
     <p id="modeline"></p>
     <div class="btns">
@@ -679,7 +680,7 @@ if (save && save.inv) save.inv.forEach((s, i) => { inv[i] = deser(s); });
 else if (mode === 'creative') CREATIVE_HOTBAR.forEach((id, i) => inv[i] = { id, count: 64 });
 
 const SETTINGS_KEY = 'blockcraft-settings';
-const settings = { look: 'stick', sens: 1, invert: false, volume: 0.7, v: 2 };
+const settings = { look: 'stick', sens: 1, invert: false, volume: 0.7, music: true, v: 2 };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (e) { /* 기본값 사용 */ }
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* 무시 */ } }
 if (settings.v !== 2) { settings.look = 'stick'; settings.v = 2; saveSettings(); } // 이전 버전 설정은 새 기본값(조이스틱)으로
@@ -4155,6 +4156,37 @@ function mapTick(dt) {
   mapT -= dt;
   if (mapT <= 0) { mapT = 0.5; drawMap(); }
 }
+// ── 배경 음악: 몇 분마다 조용한 피아노 같은 짧은 악절을 즉석에서 만듦 ──
+const music = { t: 40 + Math.random() * 40 };
+function pianoNote(freq, when, vol) {
+  const ctx = audio.ctx, t = ctx.currentTime + when;
+  for (const [mul, v, type] of [[1, 1, 'triangle'], [2, 0.25, 'sine'], [3, 0.08, 'sine']]) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = freq * mul;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol * v, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 3.5);
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2200;
+    o.connect(f); f.connect(g); g.connect(audio.out); o.start(t); o.stop(t + 3.6);
+  }
+}
+function musicTick(dt) {
+  if (!audio.ctx || settings.music === false || settings.volume <= 0 || ui) return;
+  music.t -= dt;
+  if (music.t > 0) return;
+  music.t = 90 + Math.random() * 150;
+  // 차원마다 음계: 지상은 밝은 5음계, 네더는 어두운 단조, 엔드는 신비로운 온음계
+  const scale = dim === 'nether' ? [0, 3, 5, 7, 8, 12] : dim === 'end' ? [0, 2, 4, 6, 8, 10, 12] : [0, 2, 4, 7, 9, 12, 14];
+  const root = dim === 'nether' ? 146.8 : dim === 'end' ? 196 : 261.6 * (Math.random() < 0.5 ? 1 : 0.75);
+  const len = 6 + (Math.random() * 7 | 0);
+  let when = 0.2, idx = Math.random() * 3 | 0;
+  for (let i = 0; i < len; i++) {
+    idx = Math.max(0, Math.min(scale.length - 1, idx + (Math.random() * 5 | 0) - 2));
+    const f = root * Math.pow(2, scale[idx] / 12);
+    pianoNote(f, when, 0.05);
+    if (Math.random() < 0.35) pianoNote(f / 2, when, 0.03); // 가끔 낮은 옥타브를 겹침
+    when += [0.5, 0.75, 1, 1.5][Math.random() * 4 | 0];
+  }
+  pianoNote(root / 2, when, 0.035);
+}
 // ── 물약 효과 ──
 const effectsEl = document.getElementById('effects');
 function updateEffectsHud() {
@@ -5707,6 +5739,9 @@ function newWorld(newMode) {
     if (audio.out) audio.out.gain.value = settings.volume;
   });
   vol.addEventListener('change', () => { audioInit(); sfx.pop(); });
+  const mus = document.getElementById('set-music');
+  mus.checked = settings.music !== false;
+  mus.addEventListener('change', () => { settings.music = mus.checked; saveSettings(); music.t = mus.checked ? 2 : 0; });
 })();
 confirmButton('new-survival', () => newWorld('survival'));
 confirmButton('new-creative', () => newWorld('creative'));
@@ -5944,6 +5979,7 @@ function frame(now) {
     rsTick(dt);
     effectsTick(dt);
     mapTick(dt);
+    musicTick(dt);
     spawnerTick(dt);
     updateBoats(dt);
   } else { highlight.visible = false; crack.visible = false; }
