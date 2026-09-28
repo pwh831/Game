@@ -182,6 +182,8 @@
       <label for="set-sens">시점 감도 <output id="set-sens-val">1.0</output></label>
       <input id="set-sens" type="range" min="0.3" max="2.5" step="0.1">
       <label class="check"><input id="set-invert" type="checkbox"> 스와이프 방향 반대로</label>
+      <label for="set-volume">소리 크기 <output id="set-volume-val">70%</output></label>
+      <input id="set-volume" type="range" min="0" max="1" step="0.05">
     </div>
     <p id="modeline"></p>
     <div class="btns">
@@ -217,11 +219,12 @@ const SAVE_KEY = 'blockcraft-save-v1';
 
 const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, WATER: 7, PLANKS: 8,
   COBBLE: 9, GLASS: 10, BRICK: 11, SNOW: 12, BEDROCK: 13, TABLE: 14,
-  COAL_ORE: 15, IRON_ORE: 16, GOLD_ORE: 17, DIAMOND_ORE: 18, FURNACE: 19, IRON_BLOCK: 20, GOLD_BLOCK: 21, DIAMOND_BLOCK: 22 };
+  COAL_ORE: 15, IRON_ORE: 16, GOLD_ORE: 17, DIAMOND_ORE: 18, FURNACE: 19, IRON_BLOCK: 20, GOLD_BLOCK: 21, DIAMOND_BLOCK: 22,
+  TORCH: 23, TORCH_WX: 24, TORCH_EX: 25, TORCH_NZ: 26, TORCH_SZ: 27 }; // 벽 횃불: 붙은 방향(-x, +x, -z, +z)
 const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7,
   WATER: 8, PLANKS: 9, COBBLE: 10, GLASS: 11, BRICK: 12, SNOW: 13, SNOW_SIDE: 14, BEDROCK: 15, TABLE_TOP: 16, TABLE_SIDE: 17,
   COAL_ORE: 18, IRON_ORE: 19, GOLD_ORE: 20, DIAMOND_ORE: 21, FURNACE_FRONT: 22, FURNACE_TOP: 23,
-  IRON_BLOCK: 24, GOLD_BLOCK: 25, DIAMOND_BLOCK: 26 };
+  IRON_BLOCK: 24, GOLD_BLOCK: 25, DIAMOND_BLOCK: 26, TORCH: 27 };
 const NT = 32, TILE = 16;
 
 const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_SWORD: 104, WOOD_AXE: 105, STONE_AXE: 106,
@@ -256,6 +259,10 @@ BLOCKS[B.FURNACE]     = { name: '화로', tex: [T.FURNACE_TOP, T.FURNACE_TOP, T.
 BLOCKS[B.IRON_BLOCK]  = { name: '철 블록', tex: [T.IRON_BLOCK, T.IRON_BLOCK, T.IRON_BLOCK], hard: 5, tool: 'pickaxe', needsTool: true, tier: 2 };
 BLOCKS[B.GOLD_BLOCK]  = { name: '금 블록', tex: [T.GOLD_BLOCK, T.GOLD_BLOCK, T.GOLD_BLOCK], hard: 3, tool: 'pickaxe', needsTool: true, tier: 3 };
 BLOCKS[B.DIAMOND_BLOCK] = { name: '다이아몬드 블록', tex: [T.DIAMOND_BLOCK, T.DIAMOND_BLOCK, T.DIAMOND_BLOCK], hard: 5, tool: 'pickaxe', needsTool: true, tier: 3 };
+[[B.TORCH, 0, 0], [B.TORCH_WX, -1, 0], [B.TORCH_EX, 1, 0], [B.TORCH_NZ, 0, -1], [B.TORCH_SZ, 0, 1]].forEach(([id, dx, dz]) => {
+  BLOCKS[id] = { name: '횃불', tex: [T.TORCH, T.TORCH, T.TORCH], solid: false, transparent: true, ao: false, hard: 0.05,
+    emit: 14, torch: [dx, dz], drop: B.TORCH, noItem: id !== B.TORCH, snd: 'wood' };
+});
 for (const b of BLOCKS) {
   if (b.solid === undefined) b.solid = true;
   if (b.transparent === undefined) b.transparent = false;
@@ -263,12 +270,16 @@ for (const b of BLOCKS) {
 }
 const SOLID = new Uint8Array(BLOCKS.length), TRANSP = new Uint8Array(BLOCKS.length), OCC = new Uint8Array(BLOCKS.length);
 BLOCKS.forEach((b, i) => { SOLID[i] = b.solid ? 1 : 0; TRANSP[i] = b.transparent ? 1 : 0; OCC[i] = b.ao ? 1 : 0; });
+// 빛: LOP 빛을 막음, ATTEN 통과할 때 추가로 약해짐, EMIT 스스로 내는 밝기
+const LOP = new Uint8Array(BLOCKS.length), ATTEN = new Uint8Array(BLOCKS.length), EMIT = new Uint8Array(BLOCKS.length);
+BLOCKS.forEach((b, i) => { LOP[i] = b.solid && !b.transparent ? 1 : 0; EMIT[i] = b.emit || 0; });
+ATTEN[B.LEAVES] = 1; ATTEN[B.WATER] = 2;
 
 // 광맥: [블록, 청크당 개수, 최저 높이, 최고 높이, 광맥 크기]
 const ORE_GEN = [[B.COAL_ORE, 16, 4, 70, 9], [B.IRON_ORE, 9, 4, 48, 6], [B.GOLD_ORE, 2.2, 3, 28, 6], [B.DIAMOND_ORE, 1.1, 2, 15, 5]];
 
 const ITEMS = {};
-BLOCKS.forEach((b, id) => { if (id !== B.AIR && id !== B.WATER) ITEMS[id] = { name: b.name, stack: 64, block: true }; });
+BLOCKS.forEach((b, id) => { if (id !== B.AIR && id !== B.WATER && !b.noItem) ITEMS[id] = { name: b.name, stack: 64, block: true }; });
 ITEMS[I.STICK] = { name: '막대기', stack: 64 };
 const MAT = {
   wood: { tier: 1, speed: 2, dur: 60, bonus: 0 },
@@ -301,6 +312,7 @@ const RECIPES = [
   { out: [B.PLANKS, 4], in: [[B.LOG, 1]] },
   { out: [I.STICK, 4], in: [[B.PLANKS, 2]] },
   { out: [B.TABLE, 1], in: [[B.PLANKS, 4]] },
+  { out: [B.TORCH, 4], in: [[I.COAL, 1], [I.STICK, 1]] },
   { out: [B.FURNACE, 1], in: [[B.COBBLE, 8]], table: true },
 ];
 for (const [, , m, ids] of TOOL_SET) RECIPES.push(
@@ -320,10 +332,10 @@ RECIPES.push(
 const SMELT = [[B.IRON_ORE, I.IRON_INGOT], [B.GOLD_ORE, I.GOLD_INGOT], [B.SAND, B.GLASS], [B.COBBLE, B.STONE],
   [I.PORK, I.COOKED_PORK], [B.LOG, I.COAL]];
 const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [I.STICK, 0.5]];
-const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.BEDROCK,
+const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.BEDROCK,
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
   I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.FLESH];
-const CREATIVE_HOTBAR = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.PLANKS, B.LOG, B.GLASS, B.BRICK, B.SAND];
+const CREATIVE_HOTBAR = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.PLANKS, B.LOG, B.GLASS, B.BRICK, B.TORCH];
 
 // =====================================================================
 // 저장 데이터
@@ -340,7 +352,7 @@ if (save && save.inv) save.inv.forEach((s, i) => { if (s && ITEMS[s[0]]) inv[i] 
 else if (mode === 'creative') CREATIVE_HOTBAR.forEach((id, i) => inv[i] = { id, count: 64 });
 
 const SETTINGS_KEY = 'blockcraft-settings';
-const settings = { look: 'scroll', sens: 1, invert: false };
+const settings = { look: 'scroll', sens: 1, invert: false, volume: 0.7 };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (e) { /* 기본값 사용 */ }
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* 무시 */ } }
 
@@ -508,7 +520,137 @@ function generateChunk(cx, cz) {
 
   const c = { cx, cz, data, mesh: null, water: null, dirty: true, meshed: false };
   chunks.set(key(cx, cz), c);
+  initChunkLight(c);
   return c;
+}
+
+// =====================================================================
+// 빛 (하늘빛 + 블록빛, 0~15 단계를 칸마다 퍼뜨림)
+// =====================================================================
+const DIRS6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+let lcCache = null;
+function chunkOf(x, z) {
+  const cx = Math.floor(x / CS), cz = Math.floor(z / CS);
+  if (lcCache && lcCache.cx === cx && lcCache.cz === cz) return lcCache;
+  const c = chunks.get(key(cx, cz));
+  if (c) lcCache = c;
+  return c;
+}
+function lightSpread(q, sky, touched) {
+  for (let h = 0; h < q.length; h += 3) {
+    const x = q[h], y = q[h + 1], z = q[h + 2];
+    const c = chunkOf(x, z);
+    if (!c || !c.sky) continue;
+    const L = (sky ? c.sky : c.blk)[vidx(x - c.cx * CS, y, z - c.cz * CS)];
+    if (L <= 1) continue;
+    for (let d = 0; d < 6; d++) {
+      const D = DIRS6[d], ny = y + D[1];
+      if (ny < 0 || ny >= CH) continue;
+      const nx = x + D[0], nz = z + D[2];
+      const n = chunkOf(nx, nz);
+      if (!n || !n.sky) continue;
+      const i = vidx(nx - n.cx * CS, ny, nz - n.cz * CS), id = n.data[i];
+      if (LOP[id]) continue;
+      const t = (sky && d === 3 && L === 15 && ATTEN[id] === 0) ? 15 : L - 1 - ATTEN[id];
+      const arr = sky ? n.sky : n.blk;
+      if (t > arr[i]) { arr[i] = t; q.push(nx, ny, nz); if (touched) touched.add(n); }
+    }
+  }
+}
+function lightUnspread(rq, sky, touched) {
+  const pq = [];
+  for (let h = 0; h < rq.length; h += 4) {
+    const x = rq[h], y = rq[h + 1], z = rq[h + 2], val = rq[h + 3];
+    for (let d = 0; d < 6; d++) {
+      const D = DIRS6[d], ny = y + D[1];
+      if (ny < 0 || ny >= CH) continue;
+      const nx = x + D[0], nz = z + D[2];
+      const n = chunkOf(nx, nz);
+      if (!n || !n.sky) continue;
+      const i = vidx(nx - n.cx * CS, ny, nz - n.cz * CS);
+      const arr = sky ? n.sky : n.blk, nl = arr[i];
+      if (!nl) continue;
+      if ((nl < val || (sky && d === 3 && val === 15 && nl === 15)) && !(!sky && EMIT[n.data[i]])) {
+        arr[i] = 0; rq.push(nx, ny, nz, nl); touched.add(n);
+      } else pq.push(nx, ny, nz);
+    }
+  }
+  lightSpread(pq, sky, touched);
+}
+function relight(c, x, y, z, newId) {
+  const i = vidx(x - c.cx * CS, y, z - c.cz * CS);
+  const touched = new Set([c]);
+  for (const sky of [true, false]) {
+    const arr = sky ? c.sky : c.blk, v = arr[i];
+    arr[i] = 0;
+    lightUnspread([x, y, z, v], sky, touched);
+  }
+  if (EMIT[newId]) { c.blk[i] = EMIT[newId]; lightSpread([x, y, z], false, touched); }
+  return touched;
+}
+function initChunkLight(c) {
+  const { data, cx, cz } = c;
+  const sky = c.sky = new Uint8Array(CS * CS * CH), blk = c.blk = new Uint8Array(CS * CS * CH);
+  const tops = c.tops = new Int16Array(CS * CS);
+  lcCache = null;
+  // 1) 위에서 곧장 내려오는 햇빛
+  for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
+    let v = 15, top = -1;
+    for (let y = CH - 1; y >= 0; y--) {
+      const i = vidx(x, y, z), id = data[i];
+      if (LOP[id]) { top = y; break; }
+      v = Math.max(0, v - ATTEN[id]);
+      sky[i] = v;
+      if (!v) { top = y; break; }
+    }
+    tops[z * CS + x] = top;
+  }
+  const x0 = cx * CS, z0 = cz * CS, qs = [], qb = [];
+  const topAt = (lx, lz) => {
+    if (lx >= 0 && lx < CS && lz >= 0 && lz < CS) return tops[lz * CS + lx];
+    const wx = x0 + lx, wz = z0 + lz;
+    const n = chunks.get(key(Math.floor(wx / CS), Math.floor(wz / CS)));
+    return n && n.tops ? n.tops[(wz - n.cz * CS) * CS + (wx - n.cx * CS)] : -1;
+  };
+  // 2) 옆 기둥이 더 높아서 그늘진 곳으로 옆으로 퍼질 햇빛
+  for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
+    const m = Math.max(topAt(x - 1, z), topAt(x + 1, z), topAt(x, z - 1), topAt(x, z + 1));
+    for (let y = tops[z * CS + x] + 1; y <= m + 1 && y < CH; y++) if (sky[vidx(x, y, z)] > 1) qs.push(x0 + x, y, z0 + z);
+  }
+  // 3) 설치해 둔 횃불
+  const e = edits.get(key(cx, cz));
+  if (e) for (const [i, id] of e) if (EMIT[id] && data[i] === id) {
+    blk[i] = EMIT[id];
+    qb.push(x0 + i % CS, i / (CS * CS) | 0, z0 + ((i / CS | 0) % CS));
+  }
+  // 4) 이미 있던 옆 청크의 경계면 빛을 이 청크로
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const n = chunks.get(key(cx + dx, cz + dz));
+    if (!n || !n.sky) continue;
+    for (let t = 0; t < CS; t++) {
+      const lx = dx === 1 ? 0 : dx === -1 ? CS - 1 : t, lz = dz === 1 ? 0 : dz === -1 ? CS - 1 : t;
+      const wx = n.cx * CS + lx, wz = n.cz * CS + lz;
+      for (let y = 0; y < CH; y++) {
+        const i = vidx(lx, y, lz);
+        if (n.sky[i] > 1 && n.sky[i] < 15) qs.push(wx, y, wz);
+        else if (n.sky[i] === 15 && y <= topAt(wx - dx - x0, wz - dz - z0) + 1) qs.push(wx, y, wz);
+        if (n.blk[i] > 1) qb.push(wx, y, wz);
+      }
+    }
+  }
+  const touched = new Set();
+  lightSpread(qs, true, touched);
+  lightSpread(qb, false, touched);
+  for (const t of touched) if (t !== c && t.meshed) t.dirty = true;
+}
+let skyDimNow = 0;
+const lightCurve = l => l <= 0 ? 0 : Math.pow(0.86, 15 - l);
+function brightnessAt(x, y, z) {
+  if (y >= CH) return 1;
+  const c = chunkOf(Math.floor(x), Math.floor(z));
+  if (!c || !c.sky || y < 0) return 1;
+  const i = vidx(Math.floor(x) - c.cx * CS, Math.floor(y), Math.floor(z) - c.cz * CS);
+  return Math.max(lightCurve(Math.max(0, c.sky[i] - skyDimNow)), lightCurve(c.blk[i]), 0.05);
 }
 
 function getBlock(x, y, z) {
@@ -535,12 +677,16 @@ function setBlock(x, y, z, id) {
   let m = edits.get(k);
   if (!m) { m = new Map(); edits.set(k, m); }
   m.set(i, id);
+  const touched = c.sky ? relight(c, x, y, z, id) : new Set();
+  // 모서리에 닿는 청크는 바로, 빛만 바뀐 먼 청크는 다음 프레임들에 나눠서 다시 그림
   const xs = new Set([Math.floor((x - 1) / CS), cx, Math.floor((x + 1) / CS)]);
   const zs = new Set([Math.floor((z - 1) / CS), cz, Math.floor((z + 1) / CS)]);
+  const now = new Set();
   for (const ax of xs) for (const az of zs) {
     const n = chunks.get(key(ax, az));
-    if (n && (n.meshed || (ax === cx && az === cz))) buildMesh(n);
+    if (n && (n.meshed || (ax === cx && az === cz))) { buildMesh(n); now.add(n); }
   }
+  for (const t of touched) if (!now.has(t) && t.meshed) t.dirty = true;
   scheduleSave();
 }
 
@@ -653,6 +799,12 @@ atlasCanvas.width = TILE * NT; atlasCanvas.height = TILE;
     if (x === 12 && y >= 5 && y <= 13 && y % 2) return nz([90, 90, 100], 10);
     return plank(x, y);
   });
+  tile(T.TORCH, (x, y) => {
+    if (x < 7 || x > 8 || y < 6) return [0, 0, 0, 0];
+    if (y === 6) return x === 7 ? [255, 240, 150] : [255, 200, 80];
+    if (y === 7) return x === 7 ? [255, 170, 50] : [230, 120, 30];
+    return nz([120, 88, 48], 14);
+  });
   tile(T.FURNACE_FRONT, (x, y) => {
     if (y < 2) return nz([95, 95, 95], 10);
     if (x >= 4 && x <= 11 && y >= 8 && y <= 13) return y === 13 ? nz([210, 110, 30], 30) : nz([22, 22, 22], 8); // 아궁이
@@ -709,6 +861,11 @@ function drawItemIcon(g, id) {
       const dx = x - 7.5, dy = y - 8;
       if (dx * dx * 0.9 + dy * dy + Math.sin(x * 1.7) * 3 < 34) px(x, y, r() < 0.15 ? [80, 80, 80] : [36, 36, 36], 10);
     }
+  } else if (id === B.TORCH) {
+    for (let y = 1; y < 15; y++) for (let x = 6; x < 10; x++) {
+      if (y < 5) { if (x > 6 && x < 9 || (y > 1 && y < 4)) px(x, y, y < 2 ? [255, 244, 170] : y < 3 ? [255, 206, 80] : [236, 130, 34], 10); }
+      else if (x > 6 && x < 9) px(x, y, [120, 88, 48]);
+    }
   } else if (id === I.STICK) {
     for (let y = 2; y < 14; y++) { px(14 - y, y, [120, 86, 44]); px(15 - y, y, [96, 68, 34]); }
   } else if (id === I.APPLE) {
@@ -731,7 +888,7 @@ function icon(id) {
   if (iconCache.has(id)) return iconCache.get(id);
   const c = document.createElement('canvas'); c.width = c.height = 32;
   const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
-  if (id < 100) {
+  if (id < 100 && !BLOCKS[id].torch) {
     const b = BLOCKS[id];
     g.setTransform(14 / 16, 7 / 16, -14 / 16, 7 / 16, 16, 2); g.drawImage(faceCanvas(b.tex[0], 0), 0, 0);
     g.setTransform(14 / 16, 7 / 16, 0, 15 / 16, 2, 9); g.drawImage(faceCanvas(b.tex[2], 0.32), 0, 0);
@@ -762,10 +919,44 @@ function pixelTex(src) {
   return t;
 }
 const atlasTex = pixelTex(atlasCanvas);
-const solidMat = new THREE.MeshBasicMaterial({ map: atlasTex, vertexColors: true, alphaTest: 0.5 });
-const waterMat = new THREE.MeshBasicMaterial({ map: atlasTex, vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false, side: THREE.DoubleSide });
+// 청크 셰이더: 텍스처 × 면 음영(AO) × 빛. 하늘빛은 밤이면 skyDim만큼 어두워지고, 블록빛(횃불)은 따뜻한 색
+const CHUNK_VS = `precision highp float;
+uniform mat4 modelViewMatrix; uniform mat4 projectionMatrix;
+attribute vec3 position; attribute vec2 uv; attribute float shade; attribute vec2 light;
+varying vec2 vUv; varying float vShade; varying vec2 vLight; varying float vDepth;
+void main() {
+  vUv = uv; vShade = shade; vLight = light;
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vDepth = -mv.z;
+  gl_Position = projectionMatrix * mv;
+}`;
+const CHUNK_FS = `precision mediump float;
+uniform sampler2D map; uniform float skyDim; uniform vec3 fogColor; uniform float fogNear; uniform float fogFar;
+uniform float opacity; uniform float alphaTest;
+varying vec2 vUv; varying float vShade; varying vec2 vLight; varying float vDepth;
+float curve(float l) { return l <= 0.01 ? 0.0 : pow(0.86, 15.0 - l); }
+void main() {
+  vec4 t = texture2D(map, vUv);
+  if (t.a < alphaTest) discard;
+  float s = max(vLight.x * 15.0 - skyDim, 0.0);
+  float b = vLight.y * 15.0;
+  vec3 lc = max(vec3(curve(s)), curve(b) * vec3(1.0, 0.86, 0.66));
+  lc = max(lc, vec3(0.05));
+  vec3 col = t.rgb * vShade * lc;
+  gl_FragColor = vec4(mix(col, fogColor, smoothstep(fogNear, fogFar, vDepth)), t.a * opacity);
+}`;
+function chunkMat(o) {
+  return new THREE.RawShaderMaterial({
+    vertexShader: CHUNK_VS, fragmentShader: CHUNK_FS,
+    uniforms: { map: { value: atlasTex }, skyDim: { value: 0 }, fogColor: { value: new THREE.Color() },
+      fogNear: { value: 50 }, fogFar: { value: 90 }, opacity: { value: o.opacity || 1 }, alphaTest: { value: o.alphaTest || 0 } },
+    transparent: !!o.transparent, depthWrite: o.depthWrite !== false, side: o.side || THREE.FrontSide,
+  });
+}
+const solidMat = chunkMat({ alphaTest: 0.5 });
+const waterMat = chunkMat({ transparent: true, opacity: 0.72, depthWrite: false, side: THREE.DoubleSide });
 const dropBlockMat = new THREE.MeshBasicMaterial({ map: atlasTex, alphaTest: 0.5 });
-const tintedMats = new Set([solidMat, waterMat, dropBlockMat]); // 낮/밤 밝기를 받는 재질
+const tintedMats = new Set([dropBlockMat]); // 낮/밤 밝기를 받는 재질
 
 const sun = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshBasicMaterial({ color: 0xfff3b0, fog: false }));
 const moon = new THREE.Mesh(new THREE.PlaneGeometry(26, 26), new THREE.MeshBasicMaterial({ color: 0xdde4ff, fog: false }));
@@ -830,7 +1021,7 @@ const FACES = [
 ];
 const AO_CURVE = [0.42, 0.62, 0.8, 1.0];
 const PX = CS + 2, PY = CH + 2, PZ = CS + 2;
-const pad = new Uint8Array(PX * PY * PZ);
+const pad = new Uint8Array(PX * PY * PZ), padSky = new Uint8Array(PX * PY * PZ), padBlk = new Uint8Array(PX * PY * PZ);
 const pidx = (x, y, z) => (y * PZ + z) * PX + x;
 for (const f of FACES) {
   const [nx, ny, nz] = f.dir;
@@ -859,7 +1050,8 @@ function makeGeo(a) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(a.pos, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(a.uv, 2));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(a.col, 3));
+  g.setAttribute('shade', new THREE.Float32BufferAttribute(a.sh, 1));
+  g.setAttribute('light', new THREE.Float32BufferAttribute(a.light, 2));
   g.setIndex(a.idx);
   g.computeBoundingSphere();
   return g;
@@ -871,17 +1063,24 @@ function buildMesh(c) {
     const ncx = Math.floor(wx / CS), ncz = Math.floor(wz / CS);
     const n = ncx === cx && ncz === cz ? c : chunks.get(key(ncx, ncz));
     const sx = wx - ncx * CS, sz = wz - ncz * CS;
-    pad[pidx(lx + 1, 0, lz + 1)] = B.BEDROCK;
-    pad[pidx(lx + 1, PY - 1, lz + 1)] = B.AIR;
-    for (let y = 0; y < CH; y++) pad[pidx(lx + 1, y + 1, lz + 1)] = n ? n.data[vidx(sx, y, sz)] : B.AIR;
+    const bot = pidx(lx + 1, 0, lz + 1), top = pidx(lx + 1, PY - 1, lz + 1);
+    pad[bot] = B.BEDROCK; padSky[bot] = 0; padBlk[bot] = 0;
+    pad[top] = B.AIR; padSky[top] = 15; padBlk[top] = 0;
+    for (let y = 0; y < CH; y++) {
+      const pi = pidx(lx + 1, y + 1, lz + 1), vi = vidx(sx, y, sz);
+      pad[pi] = n ? n.data[vi] : B.AIR;
+      padSky[pi] = n && n.sky ? n.sky[vi] : 15;
+      padBlk[pi] = n && n.blk ? n.blk[vi] : 0;
+    }
   }
-  const S = { pos: [], uv: [], col: [], idx: [] }, W = { pos: [], uv: [], col: [], idx: [] };
+  const S = { pos: [], uv: [], sh: [], light: [], idx: [] }, W = { pos: [], uv: [], sh: [], light: [], idx: [] };
   const e = 0.0008;
   for (let y = 0; y < CH; y++) for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
     const p = pidx(x + 1, y + 1, z + 1);
     const id = pad[p];
     if (id === B.AIR) continue;
     const blk = BLOCKS[id];
+    if (blk.torch) { emitTorch(S, x, y, z, blk, padSky[p]); continue; }
     const out = id === B.WATER ? W : S;
     for (let fi = 0; fi < 6; fi++) {
       const f = FACES[fi];
@@ -894,13 +1093,20 @@ function buildMesh(c) {
         const cr = f.corners[k];
         out.pos.push(x + cr[0], y + cr[1] - (cr[1] ? waterTop : 0), z + cr[2]);
         out.uv.push((tile + e + cr[3] * (1 - 2 * e)) / NT, e + cr[4] * (1 - 2 * e));
+        const o = f.ao[k];
         if (id !== B.WATER) {
-          const o = f.ao[k];
           const s1 = OCC[pad[p + o[0]]], s2 = OCC[pad[p + o[1]]], cc = OCC[pad[p + o[2]]];
           ao[k] = AO_CURVE[s1 && s2 ? 0 : 3 - (s1 + s2 + cc)];
         }
-        const v = f.shade * ao[k];
-        out.col.push(v, v, v);
+        out.sh.push(f.shade * ao[k]);
+        // 부드러운 빛: 면 앞 칸과 모서리를 공유하는 칸들의 평균
+        const f0 = p + f.nOff, a0 = p + o[0], a1 = p + o[1], a2 = p + o[2];
+        let ls = padSky[f0], lb = padBlk[f0], cnt = 1;
+        const t0 = !LOP[pad[a0]], t1 = !LOP[pad[a1]];
+        if (t0) { ls += padSky[a0]; lb += padBlk[a0]; cnt++; }
+        if (t1) { ls += padSky[a1]; lb += padBlk[a1]; cnt++; }
+        if ((t0 || t1) && !LOP[pad[a2]]) { ls += padSky[a2]; lb += padBlk[a2]; cnt++; }
+        out.light.push(ls / cnt / 15, lb / cnt / 15);
       }
       if (ao[0] + ao[3] > ao[1] + ao[2]) out.idx.push(base, base + 1, base + 3, base, base + 3, base + 2);
       else out.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
@@ -920,6 +1126,22 @@ function buildMesh(c) {
   }
   c.dirty = false;
   c.meshed = true;
+}
+// 횃불: 가느다란 막대 (벽 횃불은 붙은 쪽으로 치우쳐 조금 위에)
+function emitTorch(out, x, y, z, blk, sky) {
+  const [dx, dz] = blk.torch, w = 1 / 16, h = 10 / 16;
+  const px = x + 0.5 + dx * 0.32, pz = z + 0.5 + dz * 0.32, py = y + (dx || dz ? 0.22 : 0);
+  const u0 = (T.TORCH + 7 / 16) / NT, uw = (2 / 16) / NT;
+  for (const f of FACES) {
+    const base = out.pos.length / 3;
+    for (const cr of f.corners) {
+      out.pos.push(px - w + cr[0] * 2 * w, py + cr[1] * h, pz - w + cr[2] * 2 * w);
+      out.uv.push(u0 + cr[3] * uw, f.side === 2 ? cr[4] * h : 8 / 16 + cr[4] * 2 / 16);
+      out.sh.push(f.shade);
+      out.light.push(sky / 15, 1);
+    }
+    out.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+  }
 }
 function disposeMeshes(c) {
   if (c.mesh) { scene.remove(c.mesh); c.mesh.geometry.dispose(); c.mesh = null; }
@@ -942,7 +1164,7 @@ function updateChunks(budgetMs) {
     const lim = (RENDER + 3) * (RENDER + 3);
     for (const [k, c] of chunks) {
       const dx = c.cx - pcx, dz = c.cz - pcz;
-      if (dx * dx + dz * dz > lim) { disposeMeshes(c); chunks.delete(k); }
+      if (dx * dx + dz * dz > lim) { disposeMeshes(c); chunks.delete(k); lcCache = null; }
     }
   }
   const t0 = performance.now();
@@ -1035,6 +1257,7 @@ let shiftHeld = false;
 function physics(dt) {
   const p = player.pos;
   if (!chunkReady(p.x, p.z)) return;
+  const wasInWater = player.inWater;
   const feet = getBlock(Math.floor(p.x), Math.floor(p.y + 0.2), Math.floor(p.z));
   player.inWater = feet === B.WATER || getBlock(Math.floor(p.x), Math.floor(p.y + 0.9), Math.floor(p.z)) === B.WATER;
   player.headInWater = getBlock(Math.floor(p.x), Math.floor(p.y + EYE), Math.floor(p.z)) === B.WATER;
@@ -1074,9 +1297,16 @@ function physics(dt) {
     player.vel.y = Math.max(player.vel.y, -45);
   }
 
-  const wasOnGround = player.onGround;
+  const wasOnGround = player.onGround, fallSpeed = player.vel.y;
   moveEntity(player, dt);
   if (player.flying && player.onGround && !jump) player.flying = false;
+  const below = () => getBlock(Math.floor(p.x), Math.floor(p.y - 0.1), Math.floor(p.z));
+  if (player.onGround && !player.flying) {
+    player.stepAcc = (player.stepAcc || 0) + Math.hypot(player.vel.x, player.vel.z) * dt;
+    if (player.stepAcc > 2.1) { player.stepAcc = 0; sfxBlock(below(), 'step'); }
+    if (!wasOnGround && fallSpeed < -7) sfxBlock(below(), 'land');
+  }
+  if (player.inWater && !wasInWater && fallSpeed < -4) sfx.splash();
 
   // 낙하 피해
   if (player.flying || player.inWater) player.peakY = p.y;
@@ -1095,6 +1325,7 @@ function damagePlayer(n, dir, cause) {
   if (mode !== 'survival' || player.dead || player.invuln > 0 || n <= 0) return;
   player.hp = Math.max(0, player.hp - n);
   player.invuln = 0.5;
+  sfx.hurt();
   player.lastHurt = performance.now();
   if (dir) { player.vel.x += dir.x * 7; player.vel.z += dir.z * 7; player.vel.y = Math.max(player.vel.y, 5); }
   const h = document.getElementById('hurt');
@@ -1181,6 +1412,7 @@ function craft(r) {
   if (!canCraft(r, table)) return;
   for (const [id, n] of r.in) removeItem(id, n);
   const left = addItem(r.out[0], r.out[1]);
+  sfx.click();
   if (left) dropFromPlayer(r.out[0], left);
   refreshInvUI();
 }
@@ -1191,7 +1423,7 @@ function craft(r) {
 const drops = [];
 const dropGeoCache = new Map(), spriteMatCache = new Map();
 function dropMesh(id) {
-  if (id < 100) {
+  if (id < 100 && !BLOCKS[id].torch) {
     let g = dropGeoCache.get(id);
     if (!g) {
       g = new THREE.BoxGeometry(0.25, 0.25, 0.25);
@@ -1238,6 +1470,7 @@ function updateDrops(dt, t) {
       const dx = player.pos.x - d.pos.x, dy = player.pos.y + 0.8 - d.pos.y, dz = player.pos.z - d.pos.z;
       if (dx * dx + dy * dy + dz * dz < 2.4) {
         const left = addItem(d.id, d.count, d.dur);
+        if (left < d.count) sfx.pop();
         if (left === 0) removeDrop(i); else d.count = left;
       }
     }
@@ -1310,7 +1543,7 @@ function spawnMob(type, x, y, z) {
   const model = buildMobModel(type);
   const m = { type, pos: new THREE.Vector3(x, y, z), vel: new THREE.Vector3(), yaw: Math.random() * Math.PI * 2, targetYaw: 0,
     hw: type === 'pig' ? 0.45 : 0.3, h: type === 'pig' ? 0.95 : 1.95, hp: type === 'pig' ? 10 : 20, onGround: false,
-    ...model, hurt: 0, hurtCd: 0, flee: 0, wander: 0, walking: false, attackCd: 0, burnT: 0, burning: false, phase: 0 };
+    ...model, hurt: 0, hurtCd: 0, flee: 0, wander: 0, walking: false, attackCd: 0, burnT: 0, burning: false, phase: 0, sndT: 3 + Math.random() * 10 };
   m.targetYaw = m.yaw;
   scene.add(m.g);
   mobs.push(m);
@@ -1324,6 +1557,7 @@ function removeMob(m) {
 function hurtMob(m, dmg, dir) {
   if (m.hurtCd > 0) return;
   m.hp -= dmg; m.hurt = 0.35; m.hurtCd = 0.35;
+  sfxMob(m.type, 'hurt', m.pos.distanceTo(player.pos));
   if (dir) { m.vel.x += dir.x * 6; m.vel.z += dir.z * 6; m.vel.y = 5; }
   if (m.type === 'pig') { m.flee = 4; m.wander = 0; }
   if (m.hp <= 0) {
@@ -1376,6 +1610,8 @@ function updateMob(m, dt) {
       if (m.burning) { m.hurtCd = 0; hurtMob(m, 2, null); if (m.hp <= 0) return; }
     }
   }
+  m.sndT -= dt;
+  if (m.sndT <= 0) { m.sndT = (m.type === 'pig' ? 6 : 4) + Math.random() * 10; if (dist < 20) sfxMob(m.type, 'idle', dist); }
   const dy = wrapAngle(m.targetYaw - m.yaw);
   m.yaw += Math.max(-6 * dt, Math.min(6 * dt, dy));
   const tx = Math.sin(m.yaw) * move, tz = Math.cos(m.yaw) * move;
@@ -1412,13 +1648,121 @@ function spawnTick(dt) {
       if (id === B.AIR) continue;
       if (id === B.WATER || id === B.LEAVES) return;
       if (type === 'pig' && id !== B.GRASS) return;
-      if (getBlock(x, y + 1, z) === B.AIR && getBlock(x, y + 2, z) === B.AIR) spawnMob(type, x + 0.5, y + 1, z + 0.5);
+      if (getBlock(x, y + 1, z) !== B.AIR || getBlock(x, y + 2, z) !== B.AIR) return;
+      const c = chunkOf(x, z);
+      if (type === 'zombie' && c.blk[vidx(x - c.cx * CS, y + 1, z - c.cz * CS)] > 6) return; // 횃불 근처
+      spawnMob(type, x + 0.5, y + 1, z + 0.5);
       return;
     }
   };
   if (pigs < 8 && Math.random() < 0.6) tryAt('pig');
   if (light < 0.45 && mode === 'survival' && zombies < 8) tryAt('zombie');
+  // 어두운 동굴에서는 낮에도 좀비가 생김
+  if (mode === 'survival' && zombies < 10 && Math.random() < 0.5) {
+    const a = Math.random() * Math.PI * 2, d = 10 + Math.random() * 22;
+    const x = Math.floor(player.pos.x + Math.cos(a) * d), z = Math.floor(player.pos.z + Math.sin(a) * d);
+    const y = 2 + (Math.random() * Math.min(CH - 5, player.pos.y + 14) | 0);
+    if (!chunkReady(x, z) || getBlock(x, y, z) !== B.AIR || getBlock(x, y + 1, z) !== B.AIR || !SOLID[getBlock(x, y - 1, z)]) return;
+    const c = chunkOf(x, z), i = vidx(x - c.cx * CS, y, z - c.cz * CS);
+    if (c.sky[i] < 5 && c.blk[i] < 7) spawnMob('zombie', x + 0.5, y, z + 0.5);
+  }
 }
+
+// =====================================================================
+// 소리 (파일 없이 Web Audio로 합성)
+// =====================================================================
+const audio = { ctx: null, out: null, noise: null };
+function audioInit() {
+  if (audio.ctx) { if (audio.ctx.state === 'suspended') audio.ctx.resume().catch(() => {}); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  try {
+    const ctx = new AC();
+    audio.out = ctx.createGain(); audio.out.gain.value = settings.volume; audio.out.connect(ctx.destination);
+    const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    audio.noise = buf; audio.ctx = ctx;
+  } catch (e) { audio.ctx = null; }
+}
+function envelope(g, t, vol, attack, dur) {
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(vol, 0.0002), t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+}
+function sfxNoise(dur, freq, { type = 'bandpass', q = 1, vol = 0.4, delay = 0, attack = 0.004 } = {}) {
+  const ctx = audio.ctx;
+  if (!ctx || settings.volume <= 0) return;
+  const t = ctx.currentTime + delay;
+  const src = ctx.createBufferSource(); src.buffer = audio.noise;
+  const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+  const g = ctx.createGain(); envelope(g, t, vol, attack, dur);
+  src.connect(f); f.connect(g); g.connect(audio.out);
+  src.start(t, Math.random() * 0.8); src.stop(t + dur + 0.03);
+}
+function sfxTone(freq, dur, { type = 'sine', vol = 0.2, to = 0, delay = 0, lp = 0, attack = 0.005 } = {}) {
+  const ctx = audio.ctx;
+  if (!ctx || settings.volume <= 0) return;
+  const t = ctx.currentTime + delay;
+  const o = ctx.createOscillator(); o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
+  const g = ctx.createGain(); envelope(g, t, vol, attack, dur);
+  let node = o;
+  if (lp) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; o.connect(f); node = f; }
+  node.connect(g); g.connect(audio.out);
+  o.start(t); o.stop(t + dur + 0.03);
+}
+function blockSnd(id) {
+  const b = BLOCKS[id];
+  if (b.snd) return b.snd;
+  if (id === B.GLASS) return 'glass';
+  if (id === B.SAND) return 'sand';
+  if (id === B.LEAVES || id === B.GRASS) return 'grass';
+  if (id === B.SNOW) return 'snow';
+  if (b.tool === 'axe') return 'wood';
+  if (b.tool === 'shovel') return 'dirt';
+  return 'stone';
+}
+const SND_PROFILE = {
+  stone: (v, p) => { sfxNoise(0.09 * p.len, 1900 * p.pitch, { q: 0.7, vol: 0.5 * v }); sfxTone(150 * p.pitch, 0.05, { type: 'triangle', vol: 0.12 * v }); },
+  wood: (v, p) => { sfxNoise(0.1 * p.len, 520 * p.pitch, { q: 2.5, vol: 0.6 * v }); sfxTone(170 * p.pitch, 0.07, { type: 'triangle', vol: 0.22 * v }); },
+  dirt: (v, p) => sfxNoise(0.12 * p.len, 900 * p.pitch, { type: 'lowpass', q: 0.5, vol: 0.55 * v }),
+  grass: (v, p) => { sfxNoise(0.13 * p.len, 1500 * p.pitch, { type: 'lowpass', q: 0.4, vol: 0.45 * v }); sfxNoise(0.06, 3800, { type: 'highpass', vol: 0.08 * v, delay: 0.02 }); },
+  sand: (v, p) => sfxNoise(0.18 * p.len, 2600 * p.pitch, { type: 'lowpass', q: 0.2, vol: 0.32 * v }),
+  snow: (v, p) => sfxNoise(0.16 * p.len, 700 * p.pitch, { type: 'lowpass', q: 0.3, vol: 0.38 * v }),
+  glass: (v, p) => {
+    for (const [f, d] of [[2200, 0], [3100, 0.03], [2600, 0.07], [3700, 0.1]]) sfxTone(f * p.pitch, 0.14, { vol: 0.07 * v, delay: d });
+    sfxNoise(0.1, 5000, { type: 'highpass', vol: 0.15 * v });
+  },
+};
+const SND_KIND = { break: [1, 1.7], place: [0.8, 1], dig: [0.32, 0.6], step: [0.2, 0.7], land: [0.45, 1] }; // [크기, 길이]
+function sfxBlock(id, kind) {
+  if (!audio.ctx || !id) return;
+  const [v, len] = SND_KIND[kind];
+  SND_PROFILE[blockSnd(id)](v, { pitch: 0.85 + Math.random() * 0.3, len });
+}
+const sfx = {
+  hit: () => { sfxNoise(0.08, 600, { vol: 0.5 }); sfxTone(130, 0.09, { type: 'square', vol: 0.1, to: 70, lp: 800 }); },
+  hurt: () => { sfxTone(320, 0.2, { type: 'square', vol: 0.16, to: 150, lp: 1300 }); sfxNoise(0.1, 800, { vol: 0.3 }); },
+  pop: () => sfxTone(520 + Math.random() * 140, 0.08, { vol: 0.16, to: 1150 }),
+  eat: () => { for (let i = 0; i < 3; i++) sfxNoise(0.07, 1200 + Math.random() * 600, { q: 0.8, vol: 0.35, delay: i * 0.13 }); },
+  click: () => { sfxNoise(0.04, 3000, { q: 2, vol: 0.3 }); sfxTone(900, 0.04, { vol: 0.07 }); },
+  fire: () => { sfxNoise(0.4, 380, { type: 'lowpass', q: 0.5, vol: 0.35 }); sfxNoise(0.2, 2500, { type: 'highpass', vol: 0.06, delay: 0.1 }); },
+  splash: () => { sfxNoise(0.45, 1100, { type: 'lowpass', q: 0.3, vol: 0.45 }); sfxNoise(0.25, 3200, { type: 'highpass', vol: 0.1, delay: 0.05 }); },
+};
+function sfxMob(type, kind, dist) {
+  const v = Math.max(0, 1 - dist / 24);
+  if (v <= 0 || !audio.ctx) return;
+  const p = (kind === 'hurt' ? 1.35 : 1) * (0.92 + Math.random() * 0.16);
+  if (type === 'pig') {
+    sfxTone(270 * p, 0.11, { type: 'square', vol: 0.11 * v, to: 170 * p, lp: 900 });
+    sfxTone(250 * p, 0.1, { type: 'square', vol: 0.09 * v, to: 160 * p, lp: 900, delay: 0.14 });
+  } else {
+    sfxTone(95 * p, kind === 'hurt' ? 0.3 : 0.8, { type: 'sawtooth', vol: 0.15 * v, to: 68 * p, lp: 380, attack: 0.08 });
+    sfxTone(101 * p, kind === 'hurt' ? 0.25 : 0.7, { type: 'sawtooth', vol: 0.08 * v, to: 76 * p, lp: 300, delay: 0.05, attack: 0.08 });
+  }
+}
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => window.addEventListener(ev, audioInit, { capture: true, passive: true }));
 
 // =====================================================================
 // 조준, 캐기, 설치, 공격
@@ -1485,6 +1829,8 @@ function breakBlockAt(hit) {
   for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0]])
     if (getBlock(hit.x + dx, hit.y + dy, hit.z + dz) === B.WATER) { fill = B.WATER; break; }
   setBlock(hit.x, hit.y, hit.z, fill);
+  sfxBlock(hit.id, 'break');
+  dropUnsupported(hit.x, hit.y, hit.z);
   if (mode !== 'survival') return;
   const { it, harvest } = toolCheck(b);
   if (harvest) {
@@ -1494,10 +1840,19 @@ function breakBlockAt(hit) {
   } else toast(b.tool === 'pickaxe' ? `${TIER_NAME[b.tier || 1]} 곡괭이 이상이 있어야 얻을 수 있습니다` : '알맞은 도구가 있어야 얻을 수 있습니다');
   if (it && it.tool) wearSelected(it.tool === 'sword' ? 2 : 1);
 }
+// 받침 블록이 사라진 횃불은 떨어짐
+function dropUnsupported(x, y, z) {
+  for (const [dx, dy, dz, t] of [[0, 1, 0, B.TORCH], [1, 0, 0, B.TORCH_WX], [-1, 0, 0, B.TORCH_EX], [0, 0, 1, B.TORCH_NZ], [0, 0, -1, B.TORCH_SZ]]) {
+    if (getBlock(x + dx, y + dy, z + dz) !== t) continue;
+    setBlock(x + dx, y + dy, z + dz, B.AIR);
+    if (mode === 'survival') spawnDrop(B.TORCH, 1, x + dx + 0.5, y + dy + 0.3, z + dz + 0.5, null, undefined, 0.2);
+  }
+}
 function attack(m) {
   const s = heldItem(), it = s ? ITEMS[s.id] : null;
   const dmg = it && it.dmg ? it.dmg : 1;
   const dx = m.pos.x - player.pos.x, dz = m.pos.z - player.pos.z, l = Math.hypot(dx, dz) || 1;
+  sfx.hit();
   hurtMob(m, dmg, { x: dx / l, z: dz / l });
   if (it && it.tool) wearSelected(it.tool === 'sword' ? 1 : 2);
 }
@@ -1510,7 +1865,7 @@ function useItem() {
   if (!s) return;
   const info = ITEMS[s.id];
   if (info.food) {
-    if (mode === 'survival' && player.hp < 20) { player.hp = Math.min(20, player.hp + info.food); consumeSelected(); updateHearts(); toast(info.name + '을(를) 먹었습니다'); }
+    if (mode === 'survival' && player.hp < 20) { player.hp = Math.min(20, player.hp + info.food); consumeSelected(); updateHearts(); toast(info.name + '을(를) 먹었습니다'); sfx.eat(); }
     return;
   }
   if (!info.block || !hit) return;
@@ -1518,15 +1873,24 @@ function useItem() {
   if (y < 1 || y >= CH) return;
   const cur = getBlock(x, y, z);
   if (cur !== B.AIR && cur !== B.WATER) return;
+  let placeId = s.id;
+  if (s.id === B.TORCH) {
+    // 바닥 위에는 세워서, 벽에는 붙여서. 천장이나 물속, 빛을 통과하는 블록에는 못 붙임
+    const n = hit.n;
+    if (n[1] === -1 || cur === B.WATER || !LOP[hit.id]) return;
+    placeId = n[1] === 1 ? B.TORCH : n[0] === 1 ? B.TORCH_WX : n[0] === -1 ? B.TORCH_EX : n[2] === 1 ? B.TORCH_NZ : B.TORCH_SZ;
+  }
   const p = player.pos, hw = player.hw;
   if (SOLID[s.id] && x + 1 > p.x - hw && x < p.x + hw && y + 1 > p.y && y < p.y + player.h && z + 1 > p.z - hw && z < p.z + hw) return;
   for (const m of mobs) if (x + 1 > m.pos.x - m.hw && x < m.pos.x + m.hw && y + 1 > m.pos.y && y < m.pos.y + m.h && z + 1 > m.pos.z - m.hw && z < m.pos.z + m.hw) return;
-  setBlock(x, y, z, s.id);
+  setBlock(x, y, z, placeId);
+  sfxBlock(placeId, 'place');
   consumeSelected();
 }
 function pickBlock() {
   const hit = raycast(6);
   if (!hit) return;
+  if (BLOCKS[hit.id].torch) hit.id = B.TORCH;
   for (let i = 0; i < 9; i++) if (inv[i] && inv[i].id === hit.id) { selectSlot(i); return; }
   if (mode === 'creative') { inv[selected] = { id: hit.id, count: 64 }; refreshInvUI(); selectSlot(selected); }
 }
@@ -1547,9 +1911,11 @@ function interact(dt) {
         if (act.repeat <= 0) { breakBlockAt(hit); act.repeat = 0.25; }
       } else {
         if (!mine.active || mine.x !== hit.x || mine.y !== hit.y || mine.z !== hit.z) {
-          Object.assign(mine, { x: hit.x, y: hit.y, z: hit.z, progress: 0, active: true });
+          Object.assign(mine, { x: hit.x, y: hit.y, z: hit.z, progress: 0, active: true, snd: 0 });
         }
         mine.progress += dt;
+        mine.snd -= dt;
+        if (mine.snd <= 0) { sfxBlock(hit.id, 'dig'); mine.snd = 0.24; }
         const bt = breakTime(hit.id);
         if (mine.progress >= bt) { breakBlockAt(hit); mine.active = false; }
         else {
@@ -1703,7 +2069,7 @@ function smelt(from, to, all) {
     if (mode !== 'creative') fuel -= 1;
     made++;
   }
-  if (made) { const left = addItem(to, made); if (left) dropFromPlayer(to, left); toast(`${ITEMS[to].name} ${made}개를 구웠습니다`); }
+  if (made) { sfx.fire(); const left = addItem(to, made); if (left) dropFromPlayer(to, left); toast(`${ITEMS[to].name} ${made}개를 구웠습니다`); }
   refreshInvUI(); scheduleSave();
 }
 function renderSmelting(box, title, note) {
@@ -2104,6 +2470,13 @@ function newWorld(newMode) {
   lookSel.addEventListener('change', () => { settings.look = lookSel.value; saveSettings(); });
   sens.addEventListener('input', () => { settings.sens = +sens.value; sensOut.textContent = settings.sens.toFixed(1); saveSettings(); });
   inv.addEventListener('change', () => { settings.invert = inv.checked; saveSettings(); });
+  const vol = document.getElementById('set-volume'), volOut = document.getElementById('set-volume-val');
+  vol.value = settings.volume; volOut.textContent = Math.round(settings.volume * 100) + '%';
+  vol.addEventListener('input', () => {
+    settings.volume = +vol.value; volOut.textContent = Math.round(settings.volume * 100) + '%'; saveSettings();
+    if (audio.out) audio.out.gain.value = settings.volume;
+  });
+  vol.addEventListener('change', () => { audioInit(); sfx.pop(); });
 })();
 confirmButton('new-survival', () => newWorld('survival'));
 confirmButton('new-creative', () => newWorld('creative'));
@@ -2133,9 +2506,11 @@ function updateSky(dt) {
   skyColor.lerp(duskSky, Math.max(0, 1 - Math.abs(h) * 4) * 0.55);
   for (const m of tintedMats) m.color.setRGB(light, light, light);
   clouds.material.color.setRGB(light, light, light);
+  skyDimNow = (1 - (light - 0.22) / 0.78) * 10;
   for (const mob of mobs) {
-    const r = light, g = mob.hurt > 0 ? light * 0.35 : mob.burning ? light * 0.7 : light, b = mob.hurt > 0 ? light * 0.35 : mob.burning ? light * 0.45 : light;
-    for (const m of mob.mats) m.color.setRGB(r, g, b);
+    const lv = brightnessAt(mob.pos.x, mob.pos.y + mob.h * 0.7, mob.pos.z);
+    const g = mob.hurt > 0 ? 0.35 : mob.burning ? 0.7 : 1, b = mob.hurt > 0 ? 0.35 : mob.burning ? 0.45 : 1;
+    for (const m of mob.mats) m.color.setRGB(lv, lv * g, lv * b);
   }
   const cp = camera.position;
   sun.position.set(cp.x + Math.cos(ang) * 300, cp.y + Math.sin(ang) * 300, cp.z);
@@ -2152,6 +2527,10 @@ function updateSky(dt) {
     scene.fog.color.copy(skyColor);
     scene.background = skyColor;
     scene.fog.near = RENDER * CS * 0.45; scene.fog.far = RENDER * CS * 0.95;
+  }
+  for (const m of [solidMat, waterMat]) {
+    const u = m.uniforms;
+    u.skyDim.value = skyDimNow; u.fogColor.value.copy(scene.fog.color); u.fogNear.value = scene.fog.near; u.fogFar.value = scene.fog.far;
   }
 }
 
@@ -2217,7 +2596,7 @@ setTimeout(() => {
   preload();
   document.getElementById('loadmsg').textContent = save
     ? '저장된 월드를 불러왔습니다.'
-    : '나무를 캐서 판자와 작업대를 만들고, 도구를 만들어 돌을 캐 보세요. 밤에는 좀비가 나옵니다.';
+    : '나무를 캐서 판자와 작업대를 만들고, 도구를 만들어 돌을 캐 보세요. 동굴은 어두우니 횃불(석탄 + 막대기)을 챙기세요. 밤과 어두운 곳에는 좀비가 나옵니다.';
   playBtn.disabled = false;
   playBtn.focus();
   requestAnimationFrame(frame);
