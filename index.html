@@ -291,7 +291,8 @@ const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_
   DOOR: 153, BOAT: 154, EMERALD: 155,
   FLINT: 156, FLINT_STEEL: 157, BUCKET: 158, WATER_BUCKET: 159, LAVA_BUCKET: 160, QUARTZ: 161, BLAZE_ROD: 162,
   BLAZE_POWDER: 163, ENDER_PEARL: 164, EYE_OF_ENDER: 165,
-  GHAST_TEAR: 166, NETHER_BRICK_ITEM: 167, REDSTONE: 168 };
+  GHAST_TEAR: 166, NETHER_BRICK_ITEM: 167, REDSTONE: 168,
+  STRING: 169, FISHING_ROD: 170, RAW_FISH: 171, COOKED_FISH: 172 };
 // 갑옷: 132부터 [가죽, 철, 다이아몬드] × [투구, 흉갑, 레깅스, 부츠]
 const ARMOR_SET = [['leather', '가죽', 5, [1, 3, 2, 1]], ['iron', '철', 15, [2, 6, 5, 2]], ['diamond', '다이아몬드', 33, [3, 8, 6, 3]]];
 const ARMOR_PART = ['투구', '흉갑', '레깅스', '부츠'], ARMOR_BASE_DUR = [11, 16, 15, 13], ARMOR_COST = [5, 8, 7, 4];
@@ -499,6 +500,10 @@ ITEMS[I.EYE_OF_ENDER] = { name: '엔더의 눈', stack: 64, eye: true };
 ITEMS[I.GHAST_TEAR] = { name: '가스트 눈물', stack: 64 };
 ITEMS[I.NETHER_BRICK_ITEM] = { name: '네더 벽돌 조각', stack: 64 };
 ITEMS[I.REDSTONE] = { name: '레드스톤 가루', stack: 64, placeAs: B.DUST_OFF };
+ITEMS[I.STRING] = { name: '실', stack: 64 };
+ITEMS[I.FISHING_ROD] = { name: '낚싯대', stack: 1, dur: 64, rod: true };
+ITEMS[I.RAW_FISH] = { name: '생선', stack: 64, food: 2, sat: 0.4 };
+ITEMS[I.COOKED_FISH] = { name: '익힌 생선', stack: 64, food: 5, sat: 6 };
 [[I.WOOD_HOE, '나무', 'wood'], [I.STONE_HOE, '돌', 'stone'], [I.IRON_HOE, '철', 'iron'], [I.DIA_HOE, '다이아몬드', 'diamond']]
   .forEach(([id, label, mat]) => { ITEMS[id] = toolDef(label + ' 괭이', 'hoe', mat); });
 ITEMS[I.BONE] = { name: '뼈', stack: 64 };
@@ -547,6 +552,8 @@ RECIPES.push(
   { out: [B.QUARTZ_BLOCK, 1], in: [[I.QUARTZ, 4]], table: true },
   { out: [B.ENCH_TABLE, 1], in: [[I.DIAMOND, 2], [B.OBSIDIAN, 4], [I.LEATHER, 3]], table: true },
   { out: [B.LEVER_OFF, 1], in: [[I.STICK, 1], [B.COBBLE, 1]] },
+  { out: [I.FISHING_ROD, 1], in: [[I.STICK, 3], [I.STRING, 2]], table: true },
+  { out: [B.WOOL, 1], in: [[I.STRING, 4]] },
   { out: [B.BUTTON_OFF, 1], in: [[B.STONE, 1]] },
   { out: [B.PLATE_OFF, 1], in: [[B.STONE, 2]] },
   { out: [B.RS_TORCH, 1], in: [[I.REDSTONE, 1], [I.STICK, 1]] },
@@ -567,12 +574,12 @@ ARMOR_SET.forEach(([, , , ], si) => ARMOR_PART.forEach((_, pi) => RECIPES.push(
   { out: [armorId(si, pi), 1], in: [[[I.LEATHER, I.IRON_INGOT, I.DIAMOND][si], ARMOR_COST[pi]]], table: true })));
 const SMELT = [[B.IRON_ORE, I.IRON_INGOT], [B.GOLD_ORE, I.GOLD_INGOT], [B.SAND, B.GLASS], [B.COBBLE, B.STONE],
   [I.BEEF, I.STEAK], [I.MUTTON, I.COOKED_MUTTON], [B.NETHERRACK, I.NETHER_BRICK_ITEM],
-  [I.PORK, I.COOKED_PORK], [B.LOG, I.COAL]];
+  [I.PORK, I.COOKED_PORK], [B.LOG, I.COAL], [I.RAW_FISH, I.COOKED_FISH]];
 const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [B.BIRCH_LOG, 1.5], [I.STICK, 0.5]];
 const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.CHEST, B.BED, B.WOOL, B.TNT, B.BEDROCK,
   B.SANDSTONE, B.BIRCH_LOG, B.STONE_BRICK, B.PLANK_SLAB, B.COBBLE_SLAB, B.STONE_SLAB, B.PLANK_STAIRS, B.COBBLE_STAIRS, B.FENCE, B.ICE, B.CACTUS, B.FLOWER_RED, B.FLOWER_YELLOW,
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
-  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH,
+  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH,
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
   I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD,
   B.REDSTONE_ORE, B.LEVER_OFF, B.BUTTON_OFF, B.PLATE_OFF, B.RS_TORCH, B.LAMP_OFF, B.REDSTONE_BLOCK, I.REDSTONE,
@@ -596,6 +603,9 @@ loadEdits(save && save.edits, editsByDim.overworld);
 loadEdits(save && save.editsN, editsByDim.nether);
 loadEdits(save && save.editsE, editsByDim.end);
 let edits = editsByDim[dim];
+// 날씨: rain은 지금 세기(0~1), target은 향해 가는 값, timer가 끝나면 맑음↔비가 바뀜
+const weather = { rain: 0, target: 0, timer: 400 + Math.random() * 600, thunder: false, flash: 0, boltT: 8 };
+if (save && save.weather) { [weather.target, weather.timer, weather.thunder] = save.weather; weather.rain = weather.target; }
 const endState = { dragonDead: !!(save && save.dragonDead), crystalsGone: new Set(save && save.crystalsGone || []) };
 const inv = new Array(36).fill(null);
 let fuel = save && save.fuel ? save.fuel : 0;
@@ -607,7 +617,7 @@ const chests = new Map(); // "x,y,z" -> 27칸
 if (save && save.chests) for (const k in save.chests) chests.set(k, save.chests[k].map(deser));
 let spawnPoint = save && save.spawn ? save.spawn : null; // 침대 위치
 const crops = new Map(); // 자라는 중인 밀: "x,y,z" -> [x, y, z]
-if (save && save.inv) save.inv.forEach((s, i) => { if (s && ITEMS[s[0]]) inv[i] = { id: s[0], count: s[1], dur: s[2] == null ? undefined : s[2] }; });
+if (save && save.inv) save.inv.forEach((s, i) => { inv[i] = deser(s); });
 else if (mode === 'creative') CREATIVE_HOTBAR.forEach((id, i) => inv[i] = { id, count: 64 });
 
 const SETTINGS_KEY = 'blockcraft-settings';
@@ -627,6 +637,7 @@ function writeSave() {
   for (const [k, arr] of chests) obj.chests[k] = arr.map(ser);
   const dump = m => { const o = {}; for (const [k, v] of m) if (v.size) o[k] = [...v]; return o; };
   obj.edits = dump(editsByDim.overworld); obj.editsN = dump(editsByDim.nether); obj.editsE = dump(editsByDim.end);
+  obj.weather = [weather.target, Math.round(weather.timer), weather.thunder];
   obj.dim = dim; obj.dragonDead = endState.dragonDead; obj.crystalsGone = [...endState.crystalsGone];
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(obj)); } catch (e) { /* 저장할 수 없는 환경 */ }
 }
@@ -1699,6 +1710,20 @@ function drawItemIcon(g, id) {
       const d = Math.hypot(x - 7.5, y - 7.5);
       if (d < 6) px(x, y, eye && d < 2 ? [20, 40, 30] : eye && Math.abs(y - 7.5) < 2.2 ? [150, 220, 120] : (x < 7 && y < 7 ? [120, 230, 200] : [30, 110, 100]), 10);
     }
+  } else if (id === I.STRING) {
+    for (let k = 0; k < 40; k++) { const t = k / 40; px(Math.round(3 + t * 10 + Math.sin(t * 9) * 1.5), Math.round(12 - t * 9 + Math.cos(t * 7) * 1.5), [238, 238, 238], 8); }
+  } else if (id === I.FISHING_ROD) {
+    for (let y = 2; y < 15; y++) { px(15 - y, y, [120, 86, 44]); px(16 - y, y, [96, 68, 34]); }
+    for (let y = 2; y < 12; y++) px(14, y, [220, 220, 220]);
+    px(14, 12, [200, 40, 40]); px(13, 12, [200, 40, 40]); px(14, 13, [230, 230, 230]);
+  } else if (id === I.RAW_FISH || id === I.COOKED_FISH) {
+    const raw = id === I.RAW_FISH, c1 = raw ? [110, 150, 170] : [150, 100, 60], c2 = raw ? [200, 210, 220] : [200, 150, 90];
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const dx = x - 7, dy = y - 8;
+      if (dx * dx / 30 + dy * dy / 9 < 1) px(x, y, dy > 1 ? c2 : c1, 12);
+      else if (x > 11 && x < 15 && Math.abs(dy) < (x - 10) * 1.2) px(x, y, c1, 12);
+    }
+    px(3, 7, [20, 20, 20]);
   } else if (id === I.REDSTONE) {
     for (let k = 0; k < 44; k++) { const a = r() * 6.283, d = r() * 5.5; px(Math.round(7.5 + Math.cos(a) * d), Math.round(9 + Math.sin(a) * d * 0.7), r() < 0.5 ? [240, 30, 20] : [150, 10, 10], 10); }
   } else if (id === I.NETHER_BRICK_ITEM) {
@@ -2562,6 +2587,10 @@ function updateDrops(dt, t) {
     if (!chunkReady(d.pos.x, d.pos.z)) continue;
     d.vel.y = Math.max(d.vel.y - 20 * dt, -30);
     if (blockAt(d.pos) === B.WATER) d.vel.y = Math.min(d.vel.y + 30 * dt, 1);
+    if (d.pull > 0) { // 낚아 올린 것은 플레이어 쪽으로 끌려옴
+      d.pull -= dt;
+      d.vel.set((player.pos.x - d.pos.x) * 4, (player.pos.y + 0.8 - d.pos.y) * 4 + 1, (player.pos.z - d.pos.z) * 4);
+    }
     moveEntity(d, dt);
     if (d.onGround) { d.vel.x *= Math.pow(0.02, dt); d.vel.z *= Math.pow(0.02, dt); }
     d.mesh.position.set(d.pos.x, d.pos.y + 0.18 + Math.sin(t * 2.5 + d.spin) * 0.06, d.pos.z);
@@ -2599,6 +2628,8 @@ const MOBTEX = {
     return [240, 162, 160];
   }, 2),
   zSkin: makeCanvasTex(8, 8, () => [82, 140, 70], 3),
+  sSkin: makeCanvasTex(8, 8, (x, y) => (x + y * 3) % 5 === 0 ? [70, 60, 52] : [46, 40, 36], 31),
+  sFace: makeCanvasTex(8, 8, (x, y) => ((y === 3 && (x === 1 || x === 2 || x === 5 || x === 6)) || (y === 2 && (x === 3 || x === 4))) ? [220, 20, 20] : [46, 40, 36], 32),
   zFace: makeCanvasTex(8, 8, (x, y) => {
     if (y === 3 && (x === 1 || x === 2 || x === 5 || x === 6)) return [24, 40, 24];
     if (y === 6 && x >= 2 && x <= 5) return [48, 84, 40];
@@ -2684,9 +2715,10 @@ const MOB = {
   blaze:    { hp: 20, hw: 0.35, h: 1.8, flying: true, fireproof: true, speed: 2.6, drops: [[I.BLAZE_ROD, 0, 1]] },
   dragon:   { hp: 200, hw: 2.2, h: 2.2, boss: true, fireproof: true, drops: [] },
   crystal:  { hp: 1, hw: 0.6, h: 1.4, passive: true, still: true, fireproof: true, drops: [] },
+  spider:   { hp: 16, hw: 0.65, h: 0.9, speed: 2.9, melee: true, dmg: 2, dayNeutral: true, climbs: true, drops: [[I.STRING, 0, 2]] },
 };
-const HOSTILE = ['zombie', 'zombie', 'zombie', 'skeleton', 'skeleton', 'creeper', 'creeper', 'enderman'];
-const MOB_NAME = { zombie: '좀비', piglin: '좀비 피글린', enderman: '엔더맨' };
+const HOSTILE = ['zombie', 'zombie', 'zombie', 'skeleton', 'skeleton', 'creeper', 'creeper', 'enderman', 'spider', 'spider'];
+const MOB_NAME = { zombie: '좀비', piglin: '좀비 피글린', enderman: '엔더맨', spider: '거미' };
 function buildMobModel(type) {
   const g = new THREE.Group(), legs = [], arms = [], mats = [];
   const mat = tex => { const m = new THREE.MeshBasicMaterial({ map: tex }); mats.push(m); return m; };
@@ -2774,6 +2806,16 @@ function buildMobModel(type) {
     box(8, 4, 4, robe, 0, 19, 4); // 팔짱
     box(8, 10, 8, faced(skin, face), 0, 29, 0);
     box(2, 4, 2, skin, 0, 26, 5); // 코
+  } else if (type === 'spider') {
+    const skin = mat(MOBTEX.sSkin), face = mat(MOBTEX.sFace);
+    box(10, 8, 12, skin, 0, 9, -7); box(6, 6, 6, skin, 0, 9, 1); box(8, 8, 8, faced(skin, face), 0, 9, 7);
+    for (let i = 0; i < 8; i++) {
+      const side = i < 4 ? -1 : 1, z = -3 + (i % 4) * 2.5;
+      // 다리: 몸 옆에서 바깥으로 뻗고, 앞뒤로 조금씩 벌어짐 (userData.base가 기본 각도)
+      const l = limb(3 * side, 9, z, 2, 2, 15, skin, legs), leg = l.children[0];
+      leg.rotation.order = 'ZYX'; leg.rotation.set(0, Math.PI / 2, -side * 0.4); leg.position.set(side * 7 * PXU, -1.5 * PXU, 0);
+      l.userData.base = ((i % 4) - 1.5) * 0.4 * side; l.rotation.y = l.userData.base;
+    }
   } else if (type === 'creeper') {
     const skin = mat(MOBTEX.creeper), face = mat(MOBTEX.creeperFace);
     for (const [x, z] of [[-2, -3], [2, -3], [-2, 3], [2, 3]]) limb(x, 6, z, 4, 6, 4, skin, legs);
@@ -2975,7 +3017,8 @@ function updateMob(m, dt) {
     }
     return m.walking ? spd : 0;
   };
-  const hunting = !m.def.passive && mode === 'survival' && !player.dead && dist < 20 && (!m.def.neutral || m.angry);
+  const calm = m.def.neutral || (m.def.dayNeutral && light > 0.6 && dim === 'overworld');
+  const hunting = !m.def.passive && mode === 'survival' && !player.dead && dist < 20 && (!calm || m.angry);
   if (m.home && Math.hypot(m.home.x - m.pos.x, m.home.z - m.pos.z) > 18 && m.flee <= 0) {
     m.targetYaw = Math.atan2(m.home.x - m.pos.x, m.home.z - m.pos.z); move = m.def.speed;
   } else if (m.def.passive) {
@@ -3034,13 +3077,15 @@ function updateMob(m, dt) {
   if (inWater) m.vel.y = Math.min(m.vel.y + 18 * dt, 2.2);
   else m.vel.y = Math.max(m.vel.y - 28 * dt, -40);
   const wall = moveEntity(m, dt);
-  if (wall && move > 0 && m.onGround) m.vel.y = 8.2;
+  if (wall && move > 0 && m.def.climbs) m.vel.y = 3.2; // 거미는 벽을 타고 오름
+  else if (wall && move > 0 && m.onGround) m.vel.y = 8.2;
 
   const spd = Math.hypot(m.vel.x, m.vel.z);
   m.phase += spd * dt * 5;
   const swing = Math.sin(m.phase) * 0.7 * Math.min(1, spd / 1.5);
   const quad = m.legs.length === 4;
-  m.legs.forEach((l, i) => l.rotation.x = ((quad ? (i === 0 || i === 3) : i === 0) ? swing : -swing));
+  if (m.type === 'spider') m.legs.forEach((l, i) => l.rotation.y = l.userData.base + (i % 2 ? swing : -swing) * 0.5);
+  else m.legs.forEach((l, i) => l.rotation.x = ((quad ? (i === 0 || i === 3) : i === 0) ? swing : -swing));
   m.arms.forEach((a, i) => a.rotation.x = m.def.armsDown ? (i ? -swing : swing) * 0.6 : -Math.PI / 2 + (i ? swing : -swing) * 0.15);
   // 크리퍼는 터지기 직전 부풀어 오름
   const s = m.fuse > 0 ? 1 + m.fuse * 0.1 : 1;
@@ -3711,6 +3756,8 @@ function sfxMob(type, kind, dist) {
     sfx.roar(kind === 'hurt' ? 0.6 : 0.4);
   } else if (type === 'crystal') {
     sfxTone(1200, 0.2, { vol: 0.06 * v });
+  } else if (type === 'spider') {
+    for (let i = 0; i < 3; i++) sfxNoise(0.06, 1800 + Math.random() * 800, { q: 3, vol: 0.2 * v, delay: i * 0.09 });
   } else if (type === 'creeper') {
     if (kind === 'hurt') sfxNoise(0.2, 1500, { type: 'highpass', vol: 0.2 * v });
   } else {
@@ -3975,6 +4022,7 @@ function sleepAt(x, y, z) {
   fade.style.transition = 'none'; fade.style.opacity = 1;
   setTimeout(() => { fade.style.transition = 'opacity 1.5s'; fade.style.opacity = 0; }, 600);
   worldTime = DAY_LEN * 0.02;
+  if (weather.target > 0) { weather.target = 0; weather.rain = 0; weather.timer = 600 + Math.random() * 800; }
   player.hp = Math.min(20, player.hp + 6); updateHearts();
   toast('아침이 되었습니다. 부활 위치를 이 침대로 정했습니다');
 }
@@ -4179,6 +4227,7 @@ function useItem() {
   const s = heldItem();
   if (!s) return;
   const info = ITEMS[s.id];
+  if (info.rod) { castOrReel(); return; }
   if (info.bow) return; // 활은 누르고 있다가 놓을 때 쏨 (interact)
   if (info.door) {
     if (!hit || hit.n[1] !== 1 || !LOP[hit.id]) return;
@@ -4292,6 +4341,78 @@ function fireBow(charge) {
     player: true, dmg: Math.round((1 + 8 * charge) * (1 + 0.25 * (enchLv(heldItem(), 'power') + (enchLv(heldItem(), 'power') ? 1 : 0)))),
     pickup: mode === 'survival' && !enchLv(heldItem(), 'infinity') });
   sfx.bow(0);
+}
+// 낚시: 찌를 물에 던지고 기다리다가, 찌가 쑥 들어가는 순간(1초 안에) 다시 우클릭
+let bobber = null;
+const bobberMesh = new THREE.Group();
+{
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.14), new THREE.MeshBasicMaterial({ color: 0xd83030 }));
+  const bot = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.14), new THREE.MeshBasicMaterial({ color: 0xf0f0f0 }));
+  top.position.y = 0.1; bobberMesh.add(top, bot); bobberMesh.visible = false; scene.add(bobberMesh);
+}
+const fishLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+  new THREE.LineBasicMaterial({ color: 0x202020 }));
+fishLine.frustumCulled = false; fishLine.visible = false; scene.add(fishLine);
+function removeBobber() { bobber = null; bobberMesh.visible = false; fishLine.visible = false; }
+function castOrReel() {
+  swingHand();
+  if (bobber) {
+    if (bobber.bite > 0) {
+      const r = Math.random();
+      const pick = r < 0.8 ? [I.RAW_FISH, 1] : r < 0.93 ? [[I.STICK, 1], [I.STRING, 2], [I.BONE, 1], [I.LEATHER, 1]][Math.random() * 4 | 0]
+        : [[I.DIAMOND, 1], [I.ENDER_PEARL, 1], [I.GOLD_INGOT, 2], [I.IRON_INGOT, 3]][Math.random() * 4 | 0];
+      const from = bobber.pos;
+      spawnDrop(pick[0], pick[1], from.x, from.y + 0.3, from.z, new THREE.Vector3(), undefined, 0);
+      drops[drops.length - 1].pull = 1.5;
+      spawnOrbs(from.x, from.y + 0.3, from.z, 1 + (Math.random() * 3 | 0));
+      sfx.splash(); sfx.pop();
+      if (r >= 0.93) toast('보물을 낚았습니다!');
+    }
+    wearSelected(1);
+    removeBobber();
+    return;
+  }
+  const dir = lookDir();
+  bobber = { pos: camera.position.clone().add(dir.clone().multiplyScalar(0.6)), vel: dir.multiplyScalar(13).add(new THREE.Vector3(0, 2, 0)),
+    state: 'fly', wait: 0, bite: 0 };
+  bobberMesh.visible = true; fishLine.visible = true;
+  sfxNoise(0.25, 1400, { q: 1, vol: 0.12 });
+}
+function updateBobber(dt) {
+  if (!bobber) return;
+  const held = heldItem();
+  if (!held || !ITEMS[held.id].rod || player.dead || bobber.pos.distanceTo(player.pos) > 32) { removeBobber(); return; }
+  const b = bobber, p = b.pos;
+  const here = getBlock(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z));
+  if (b.state === 'fly') {
+    b.vel.y -= 20 * dt;
+    const next = p.clone().addScaledVector(b.vel, dt);
+    const nid = getBlock(Math.floor(next.x), Math.floor(next.y), Math.floor(next.z));
+    if (nid === B.WATER) {
+      b.state = 'float'; p.copy(next); b.wait = (5 + Math.random() * 15) * (weather.rain > 0.5 ? 0.7 : 1);
+      b.surface = Math.floor(next.y) + 0.88;
+      while (getBlock(Math.floor(p.x), Math.floor(b.surface) + 1, Math.floor(p.z)) === B.WATER) b.surface += 1;
+      sfxNoise(0.15, 900, { q: 1, vol: 0.12 });
+    } else if (SOLID[nid] || nid === B.LAVA) { b.state = 'ground'; b.vel.set(0, 0, 0); }
+    else p.copy(next);
+  } else if (b.state === 'float') {
+    if (here !== B.WATER && getBlock(Math.floor(p.x), Math.floor(p.y) - 1, Math.floor(p.z)) !== B.WATER) { b.state = 'fly'; b.vel.set(0, 0, 0); }
+    b.t = (b.t || 0) + dt;
+    let y = b.surface + Math.sin(b.t * 3) * 0.03;
+    if (b.bite > 0) {
+      b.bite -= dt; y -= 0.25;
+      if (b.bite <= 0) b.wait = 4 + Math.random() * 10;
+    } else {
+      b.wait -= dt;
+      if (b.wait < 2.5 && Math.random() < dt * 3) spawnBlockParticles(B.WATER, p.x - 0.5 + (Math.random() - 0.5) * 2, b.surface - 0.6, p.z - 0.5 + (Math.random() - 0.5) * 2, 1);
+      if (b.wait <= 0) { b.bite = 1; sfx.splash(); spawnBlockParticles(B.WATER, p.x - 0.5, b.surface - 0.5, p.z - 0.5, 6); }
+    }
+    p.y = y;
+  }
+  bobberMesh.position.copy(p);
+  const tip = camera.position.clone().add(lookDir().multiplyScalar(0.8)).add(new THREE.Vector3(0, -0.25, 0));
+  const pos = fishLine.geometry.attributes.position;
+  pos.setXYZ(0, tip.x, tip.y, tip.z); pos.setXYZ(1, p.x, p.y + 0.15, p.z); pos.needsUpdate = true;
 }
 let attackCd = 0;
 const act = { left: false, right: false, repeat: 0 };
@@ -5147,7 +5268,8 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) { wri
 // =====================================================================
 const DAY_LEN = 600;
 let worldTime = save && save.time != null ? save.time : DAY_LEN * 0.3;
-let light = 1;
+let light = 1, dayLight = 1;
+const rainSky = new THREE.Color();
 const daySky = new THREE.Color(0x88c0ff), nightSky = new THREE.Color(0x0b1026), duskSky = new THREE.Color(0xf29a5a);
 const waterFog = new THREE.Color(0x1d3f8a);
 const lavaFog = new THREE.Color(0xd8561a);
@@ -5180,11 +5302,16 @@ function updateSky(dt) {
   ambientNow = 0.05;
   const ang = (worldTime / DAY_LEN) * Math.PI * 2;
   const h = Math.sin(ang);
-  light = Math.max(0.22, Math.min(1, 0.5 + h * 1.2));
+  dayLight = Math.max(0.22, Math.min(1, 0.5 + h * 1.2));
+  light = Math.max(0.2, dayLight * (1 - 0.38 * weather.rain));
+  if (weather.flash > 0) light = 1;
   skyColor.copy(nightSky).lerp(daySky, Math.max(0, Math.min(1, 0.4 + h * 1.6)));
   skyColor.lerp(duskSky, Math.max(0, 1 - Math.abs(h) * 4) * 0.55);
+  if (weather.rain > 0) skyColor.lerp(rainSky.setRGB(0.42 * light, 0.46 * light, 0.5 * light), weather.rain * 0.8);
+  if (weather.flash > 0) skyColor.setRGB(0.85, 0.88, 0.95);
   for (const m of tintedMats) m.color.setRGB(light, light, light);
-  clouds.material.color.setRGB(light, light, light);
+  const cl = light * (1 - 0.35 * weather.rain);
+  clouds.material.color.setRGB(cl, cl, cl);
   skyDimNow = (1 - (light - 0.22) / 0.78) * 10;
   for (const mob of mobs) {
     const lv = brightnessAt(mob.pos.x, mob.pos.y + mob.h * 0.7, mob.pos.z);
@@ -5195,7 +5322,7 @@ function updateSky(dt) {
   sun.position.set(cp.x + Math.cos(ang) * 300, cp.y + Math.sin(ang) * 300, cp.z);
   moon.position.set(cp.x - Math.cos(ang) * 300, cp.y - Math.sin(ang) * 300, cp.z);
   sun.lookAt(cp); moon.lookAt(cp);
-  sun.visible = h > -0.15; moon.visible = h < 0.15;
+  sun.visible = h > -0.15 && weather.rain < 0.6; moon.visible = h < 0.15 && weather.rain < 0.6;
   clouds.position.x = cp.x - ((cp.x + worldTime * 1.5) % 384);
   clouds.position.z = cp.z - (cp.z % 384);
   if (player.headInLava) {
@@ -5214,6 +5341,102 @@ function updateSky(dt) {
     const u = m.uniforms;
     u.skyDim.value = skyDimNow; u.ambient.value = ambientNow; u.fogColor.value.copy(scene.fog.color); u.fogNear.value = scene.fog.near; u.fogFar.value = scene.fog.far;
   }
+}
+
+// ── 비·눈·번개 ──
+const PRECIP = 1200;
+const rainGeo = new THREE.BufferGeometry(), rainPos = new Float32Array(PRECIP * 6);
+rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+const rainLines = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0x9ab4d8, transparent: true, opacity: 0.55 }));
+const snowGeo = new THREE.BufferGeometry(), snowPos = new Float32Array(PRECIP * 3);
+snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
+const snowPts = new THREE.Points(snowGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.12, transparent: true, opacity: 0.9 }));
+rainLines.frustumCulled = snowPts.frustumCulled = false;
+scene.add(rainLines, snowPts);
+const drops3 = Array.from({ length: PRECIP }, () => ({ x: 0, y: -1000, z: 0, vy: 0, ground: 0, dx: 0, dz: 0 }));
+const bolt = new THREE.Group(); bolt.visible = false; scene.add(bolt);
+const boltMat = new THREE.MeshBasicMaterial({ color: 0xeef4ff, transparent: true, opacity: 0.9 });
+let boltLife = 0, precipBiome = BIO.PLAINS, precipBiomeT = 0, rainSrc = null, rainGain = null;
+function groundAt(x, z, from) {
+  for (let y = Math.min(CH - 1, from); y > 0; y--) if (getBlock(x, y, z) !== B.AIR) return y + 1;
+  return 0;
+}
+function strikeLightning(x, z) {
+  const gy = groundAt(Math.floor(x), Math.floor(z), CH - 1);
+  bolt.clear();
+  let px = x, pz = z;
+  for (let y = gy; y < gy + 70; y += 4) {
+    const nx = px + (Math.random() - 0.5) * 2, nz = pz + (Math.random() - 0.5) * 2;
+    const seg = new THREE.Mesh(new THREE.BoxGeometry(0.25, 4.2, 0.25), boltMat);
+    seg.position.set((px + nx) / 2, y + 2, (pz + nz) / 2);
+    seg.rotation.z = Math.atan2(px - nx, 4); seg.rotation.x = Math.atan2(nz - pz, 4);
+    bolt.add(seg); px = nx; pz = nz;
+  }
+  bolt.visible = true; boltLife = 0.25; weather.flash = 0.18;
+  const d = Math.hypot(x - player.pos.x, z - player.pos.z);
+  sfxNoise(0.25, 3000, { type: 'highpass', vol: Math.max(0.05, 0.5 - d / 150) });
+  sfxNoise(2.8, 90, { type: 'lowpass', vol: Math.max(0.1, 0.9 - d / 120), delay: Math.min(1.5, d / 60), attack: 0.05 });
+  if (Math.hypot(d, gy - player.pos.y) < 3 && mode === 'survival') damagePlayer(5, null, '번개에 맞았습니다', true);
+  for (const m of mobs) if (Math.hypot(m.pos.x - x, m.pos.z - z) < 3 && Math.abs(m.pos.y - gy) < 4) { m.hurtCd = 0; hurtMob(m, 5, null); }
+}
+function updateWeather(dt) {
+  weather.timer -= dt;
+  if (weather.timer <= 0) {
+    if (weather.target > 0) { weather.target = 0; weather.timer = 600 + Math.random() * 900; }
+    else { weather.target = 1; weather.thunder = Math.random() < 0.35; weather.timer = 180 + Math.random() * 300; }
+  }
+  weather.rain += Math.max(-dt * 0.08, Math.min(dt * 0.08, weather.target - weather.rain));
+  weather.flash -= dt;
+  if (boltLife > 0) { boltLife -= dt; if (boltLife <= 0) bolt.visible = false; }
+  const over = dim === 'overworld';
+  const amt = over ? weather.rain : 0;
+  // 번개: 뇌우일 때 6~24초마다 주변 60칸 안 어딘가에
+  if (over && weather.thunder && weather.rain > 0.8) {
+    weather.boltT -= dt;
+    if (weather.boltT <= 0) {
+      weather.boltT = 6 + Math.random() * 18;
+      const a = Math.random() * Math.PI * 2, r = 4 + Math.random() * 56;
+      strikeLightning(player.pos.x + Math.cos(a) * r, player.pos.z + Math.sin(a) * r);
+    }
+  }
+  // 빗소리: 잡음을 낮은 음역으로 걸러 계속 틀어 두고 세기만 조절
+  if (audio.ctx && !rainSrc) {
+    rainSrc = audio.ctx.createBufferSource(); rainSrc.buffer = audio.noise; rainSrc.loop = true;
+    const f = audio.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1400;
+    rainGain = audio.ctx.createGain(); rainGain.gain.value = 0;
+    rainSrc.connect(f); f.connect(rainGain); rainGain.connect(audio.out); rainSrc.start();
+  }
+  const cp = camera.position;
+  precipBiomeT -= dt;
+  if (precipBiomeT <= 0) { precipBiomeT = 1; precipBiome = biomeAt(Math.floor(cp.x), Math.floor(cp.z)); }
+  const kind = precipBiome === BIO.DESERT ? 0 : precipBiome === BIO.SNOW ? 2 : 1;
+  if (rainGain) {
+    const outside = skyExposed(cp.x, cp.y + 1, cp.z) ? 1 : 0.35;
+    rainGain.gain.value = kind === 1 ? amt * 0.16 * outside : 0;
+  }
+  rainLines.visible = amt > 0 && kind === 1; snowPts.visible = amt > 0 && kind === 2;
+  if (!amt || !kind) return;
+  const active = Math.floor(PRECIP * amt), R = 18;
+  for (let i = 0; i < PRECIP; i++) {
+    const d = drops3[i];
+    if (i >= active) { d.y = -1000; }
+    else {
+      if (d.y < d.ground || Math.abs(d.x - cp.x) > R || Math.abs(d.z - cp.z) > R || d.y > cp.y + 30) {
+        d.x = cp.x + (Math.random() * 2 - 1) * R; d.z = cp.z + (Math.random() * 2 - 1) * R;
+        d.ground = groundAt(Math.floor(d.x), Math.floor(d.z), Math.floor(cp.y) + 24);
+        d.y = d.ground > cp.y + 20 ? -1000 : Math.max(d.ground, cp.y) + 6 + Math.random() * 16;
+        if (d.y < 0) d.ground = -999;
+        d.vy = kind === 1 ? 17 + Math.random() * 5 : 1.6 + Math.random() * 1.2;
+        d.dx = kind === 2 ? (Math.random() - 0.5) * 0.8 : 0.8; d.dz = kind === 2 ? (Math.random() - 0.5) * 0.8 : 0.3;
+      }
+      d.y -= d.vy * dt; d.x += d.dx * dt; d.z += d.dz * dt;
+    }
+    if (kind === 1) {
+      rainPos[i * 6] = d.x; rainPos[i * 6 + 1] = d.y; rainPos[i * 6 + 2] = d.z;
+      rainPos[i * 6 + 3] = d.x - 0.03; rainPos[i * 6 + 4] = d.y + 0.7; rainPos[i * 6 + 5] = d.z - 0.01;
+    } else { snowPos[i * 3] = d.x; snowPos[i * 3 + 1] = d.y; snowPos[i * 3 + 2] = d.z; }
+  }
+  (kind === 1 ? rainGeo : snowGeo).attributes.position.needsUpdate = true;
 }
 
 // =====================================================================
@@ -5258,6 +5481,8 @@ function frame(now) {
     updateEffects(dt);
     updateParticles(dt);
     updateOrbs(dt);
+    updateBobber(dt);
+    updateWeather(dt);
     updateHand(dt);
     growCrops(dt);
     rsTick(dt);
@@ -5269,7 +5494,7 @@ function frame(now) {
   if (showDebug) {
     const p = player.pos;
     infoEl.textContent = `${fps} fps  ${mode === 'survival' ? '서바이벌' : '크리에이티브'}${player.flying ? ' · 비행' : ''}\n` +
-      `XYZ ${p.x.toFixed(1)} / ${p.y.toFixed(1)} / ${p.z.toFixed(1)}\n${dim === 'overworld' ? BIO_NAME[biomeAt(Math.floor(p.x), Math.floor(p.z))] + '  ' + (light < 0.45 ? '밤' : '낮') : dim === 'nether' ? '네더' : '엔드'}  몹 ${mobs.length}`;
+      `XYZ ${p.x.toFixed(1)} / ${p.y.toFixed(1)} / ${p.z.toFixed(1)}\n${dim === 'overworld' ? BIO_NAME[biomeAt(Math.floor(p.x), Math.floor(p.z))] + '  ' + (dayLight < 0.45 ? '밤' : '낮') + (weather.rain > 0.3 ? (weather.thunder ? ' · 뇌우' : ' · 비') : '') : dim === 'nether' ? '네더' : '엔드'}  몹 ${mobs.length}`;
   } else infoEl.textContent = '';
   renderer.render(scene, camera);
 }
