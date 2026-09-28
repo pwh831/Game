@@ -6018,7 +6018,13 @@ canvas.addEventListener('pointerup', endLook); canvas.addEventListener('pointerc
     el.addEventListener('pointerdown', e => { e.preventDefault(); down(); });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, () => up && up());
   };
-  hold('t-jump', () => { if (player.riding) dismount(); else touchState.jump = true; }, () => touchState.jump = false);
+  // 안장 얹은 말을 탈 때는 점프 버튼이 점프, 두 번 빠르게 누르면 내림 (보트는 한 번에 내림)
+  let lastJumpTap = 0;
+  hold('t-jump', () => {
+    const r = player.riding, now = performance.now();
+    if (r && r.def && r.saddled && now - lastJumpTap > 400) { lastJumpTap = now; touchState.jump = true; return; }
+    if (r) dismount(); else touchState.jump = true;
+  }, () => touchState.jump = false);
   hold('t-fly', toggleFly);
   hold('t-break', () => { act.left = true; act.repeat = 0; }, () => act.left = false);
   hold('t-place', () => { act.right = true; act.repeat = 0; }, () => act.right = false);
