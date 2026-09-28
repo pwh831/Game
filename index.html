@@ -263,7 +263,11 @@ const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, WAT
   PLANK_STAIRS: 48, COBBLE_STAIRS: 52, FENCE: 56, DOOR: 57, // 계단은 방향 4개, 문은 방향 4 × 열림 2 × 위아래 2 = 16개
   LAVA: 73, OBSIDIAN: 74, GRAVEL: 75, NETHERRACK: 76, SOUL_SAND: 77, GLOWSTONE: 78, QUARTZ_ORE: 79, NETHER_BRICK: 80,
   PORTAL_X: 81, PORTAL_Z: 82, END_STONE: 83, EPF: 84, EPF_EYE: 85, END_PORTAL: 86, DRAGON_EGG: 87, QUARTZ_BLOCK: 88,
-  ENCH_TABLE: 89 };
+  ENCH_TABLE: 89,
+  // 100~199는 아이템 번호라서 이후 블록은 200부터
+  REDSTONE_ORE: 200, DUST_OFF: 201, DUST_ON: 202, LEVER_OFF: 203, LEVER_ON: 204, BUTTON_OFF: 205, BUTTON_ON: 206,
+  PLATE_OFF: 207, PLATE_ON: 208, RS_TORCH: 209, LAMP_OFF: 210, LAMP_ON: 211, REDSTONE_BLOCK: 212, RS_TORCH_OFF: 213 };
+const isBlk = id => id < 100 || id >= 200;
 const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7,
   WATER: 8, PLANKS: 9, COBBLE: 10, GLASS: 11, BRICK: 12, SNOW: 13, SNOW_SIDE: 14, BEDROCK: 15, TABLE_TOP: 16, TABLE_SIDE: 17,
   COAL_ORE: 18, IRON_ORE: 19, GOLD_ORE: 20, DIAMOND_ORE: 21, FURNACE_FRONT: 22, FURNACE_TOP: 23,
@@ -273,7 +277,8 @@ const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5
   CACTUS_SIDE: 43, CACTUS_TOP: 44, ICE: 45, SANDSTONE: 46, SANDSTONE_TOP: 47, BIRCH_SIDE: 48, STONE_BRICK: 49,
   DOOR_BOTTOM: 50, DOOR_TOP: 51, LAVA: 52, OBSIDIAN: 53, GRAVEL: 54, NETHERRACK: 55, SOUL_SAND: 56, GLOWSTONE: 57,
   QUARTZ_ORE: 58, NETHER_BRICK: 59, PORTAL: 60, END_STONE: 61, EPF_TOP: 62, EPF_SIDE: 63, EPF_EYE_TOP: 64, END_PORTAL: 65,
-  DRAGON_EGG: 66, QUARTZ_BLOCK: 67, ENCH_TOP: 68, ENCH_SIDE: 69 };
+  DRAGON_EGG: 66, QUARTZ_BLOCK: 67, ENCH_TOP: 68, ENCH_SIDE: 69,
+  REDSTONE_ORE: 70, DUST_OFF: 71, DUST_ON: 72, LEVER: 73, RS_TORCH: 74, LAMP_OFF: 75, LAMP_ON: 76, REDSTONE_BLOCK: 77 };
 const NT = 80, TILE = 16;
 
 const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_SWORD: 104, WOOD_AXE: 105, STONE_AXE: 106,
@@ -285,7 +290,8 @@ const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_
   SEEDS: 144, WHEAT: 145, BREAD: 146, BOW: 147, ARROW: 148, WOOD_HOE: 149, STONE_HOE: 150, IRON_HOE: 151, DIA_HOE: 152,
   DOOR: 153, BOAT: 154, EMERALD: 155,
   FLINT: 156, FLINT_STEEL: 157, BUCKET: 158, WATER_BUCKET: 159, LAVA_BUCKET: 160, QUARTZ: 161, BLAZE_ROD: 162,
-  BLAZE_POWDER: 163, ENDER_PEARL: 164, EYE_OF_ENDER: 165, GHAST_TEAR: 166, NETHER_BRICK_ITEM: 167 };
+  BLAZE_POWDER: 163, ENDER_PEARL: 164, EYE_OF_ENDER: 165,
+  GHAST_TEAR: 166, NETHER_BRICK_ITEM: 167, REDSTONE: 168 };
 // 갑옷: 132부터 [가죽, 철, 다이아몬드] × [투구, 흉갑, 레깅스, 부츠]
 const ARMOR_SET = [['leather', '가죽', 5, [1, 3, 2, 1]], ['iron', '철', 15, [2, 6, 5, 2]], ['diamond', '다이아몬드', 33, [3, 8, 6, 3]]];
 const ARMOR_PART = ['투구', '흉갑', '레깅스', '부츠'], ARMOR_BASE_DUR = [11, 16, 15, 13], ARMOR_COST = [5, 8, 7, 4];
@@ -365,6 +371,26 @@ BLOCKS[B.END_PORTAL] = { name: '엔드 차원문', tex: one(T.END_PORTAL), solid
 BLOCKS[B.DRAGON_EGG] = { name: '드래곤 알', tex: one(T.DRAGON_EGG), hard: 3, transparent: true, ao: false, blast: true,
   boxes: [[2 / 16, 0, 2 / 16, 14 / 16, 12 / 16, 14 / 16], [4 / 16, 12 / 16, 4 / 16, 12 / 16, 1, 12 / 16]] };
 BLOCKS[B.QUARTZ_BLOCK] = { name: '석영 블록', tex: one(T.QUARTZ_BLOCK), hard: 0.8, tool: 'pickaxe', needsTool: true, tier: 1 };
+// 레드스톤
+BLOCKS[B.REDSTONE_ORE] = { name: '레드스톤 광석', tex: one(T.REDSTONE_ORE), hard: 3, tool: 'pickaxe', needsTool: true, tier: 3, drop: I.REDSTONE };
+const flat = (h, extra) => ({ solid: false, transparent: true, ao: false, needsGround: true, hard: 0, noItem: true, ...extra, boxes: [[0, 0, 0, 1, h, 1]] });
+BLOCKS[B.DUST_OFF] = flat(1 / 16, { name: '레드스톤 가루', tex: one(T.DUST_OFF), drop: I.REDSTONE, rs: 'dust' });
+BLOCKS[B.DUST_ON] = flat(1 / 16, { name: '레드스톤 가루', tex: one(T.DUST_ON), drop: I.REDSTONE, rs: 'dust', on: true });
+BLOCKS[B.LEVER_OFF] = { name: '레버', tex: one(T.LEVER), solid: false, transparent: true, ao: false, needsGround: true, hard: 0.3, snd: 'wood',
+  boxes: [[5 / 16, 0, 4 / 16, 11 / 16, 2 / 16, 12 / 16], [7 / 16, 2 / 16, 5 / 16, 9 / 16, 10 / 16, 7 / 16]], rs: 'source', drop: B.LEVER_OFF };
+BLOCKS[B.LEVER_ON] = { ...BLOCKS[B.LEVER_OFF], boxes: [[5 / 16, 0, 4 / 16, 11 / 16, 2 / 16, 12 / 16], [7 / 16, 2 / 16, 9 / 16, 9 / 16, 10 / 16, 11 / 16]], on: true, noItem: true };
+BLOCKS[B.BUTTON_OFF] = { name: '버튼', tex: one(T.STONE), solid: false, transparent: true, ao: false, needsGround: true, hard: 0.3,
+  boxes: [[5 / 16, 0, 6 / 16, 11 / 16, 2 / 16, 10 / 16]], rs: 'source', drop: B.BUTTON_OFF };
+BLOCKS[B.BUTTON_ON] = { ...BLOCKS[B.BUTTON_OFF], boxes: [[5 / 16, 0, 6 / 16, 11 / 16, 1 / 16, 10 / 16]], on: true, noItem: true };
+BLOCKS[B.PLATE_OFF] = { name: '압력판', tex: one(T.STONE), solid: false, transparent: true, ao: false, needsGround: true, hard: 0.5,
+  boxes: [[1 / 16, 0, 1 / 16, 15 / 16, 1 / 16, 15 / 16]], rs: 'source', plate: true, drop: B.PLATE_OFF };
+BLOCKS[B.PLATE_ON] = { ...BLOCKS[B.PLATE_OFF], boxes: [[1 / 16, 0, 1 / 16, 15 / 16, 0.5 / 16, 15 / 16]], on: true, noItem: true };
+BLOCKS[B.RS_TORCH] = { name: '레드스톤 횃불', tex: one(T.RS_TORCH), solid: false, transparent: true, ao: false, hard: 0.05, emit: 7,
+  torch: [0, 0], needsGround: true, rs: 'source', on: true, snd: 'wood' };
+BLOCKS[B.RS_TORCH_OFF] = { ...BLOCKS[B.RS_TORCH], emit: 0, on: false, noItem: true, drop: B.RS_TORCH };
+BLOCKS[B.LAMP_OFF] = { name: '레드스톤 램프', tex: one(T.LAMP_OFF), hard: 0.3, rs: 'lamp', snd: 'glass', drop: B.LAMP_OFF };
+BLOCKS[B.LAMP_ON] = { ...BLOCKS[B.LAMP_OFF], tex: one(T.LAMP_ON), emit: 15, on: true, noItem: true };
+BLOCKS[B.REDSTONE_BLOCK] = { name: '레드스톤 블록', tex: one(T.REDSTONE_BLOCK), hard: 5, tool: 'pickaxe', needsTool: true, tier: 1, rs: 'source', on: true };
 BLOCKS[B.ENCH_TABLE] = { name: '마법 부여대', tex: [T.ENCH_TOP, T.OBSIDIAN, T.ENCH_SIDE], hard: 5, tool: 'pickaxe', needsTool: true, tier: 1,
   transparent: true, ao: false, boxes: [[0, 0, 0, 1, 12 / 16, 1]], emit: 7, blast: true };
 
@@ -411,6 +437,7 @@ ATTEN[B.LEAVES] = 1; ATTEN[B.WATER] = 2;
 
 // 광맥: [블록, 청크당 개수, 최저 높이, 최고 높이, 광맥 크기]
 const ORE_GEN = [[B.COAL_ORE, 16, 4, 70, 9], [B.IRON_ORE, 9, 4, 48, 6], [B.GOLD_ORE, 2.2, 3, 28, 6], [B.DIAMOND_ORE, 1.1, 2, 15, 5],
+  [B.REDSTONE_ORE, 4, 2, 16, 7],
   [B.GRAVEL, 4, 4, 60, 14]];
 const LIQUID = new Uint8Array(BLOCKS.length);
 BLOCKS.forEach((b, i) => { if (b.liquid) LIQUID[i] = 1; });
@@ -471,6 +498,7 @@ ITEMS[I.ENDER_PEARL] = { name: '엔더 진주', stack: 16, pearl: true };
 ITEMS[I.EYE_OF_ENDER] = { name: '엔더의 눈', stack: 64, eye: true };
 ITEMS[I.GHAST_TEAR] = { name: '가스트 눈물', stack: 64 };
 ITEMS[I.NETHER_BRICK_ITEM] = { name: '네더 벽돌 조각', stack: 64 };
+ITEMS[I.REDSTONE] = { name: '레드스톤 가루', stack: 64, placeAs: B.DUST_OFF };
 [[I.WOOD_HOE, '나무', 'wood'], [I.STONE_HOE, '돌', 'stone'], [I.IRON_HOE, '철', 'iron'], [I.DIA_HOE, '다이아몬드', 'diamond']]
   .forEach(([id, label, mat]) => { ITEMS[id] = toolDef(label + ' 괭이', 'hoe', mat); });
 ITEMS[I.BONE] = { name: '뼈', stack: 64 };
@@ -518,6 +546,13 @@ RECIPES.push(
   { out: [I.EYE_OF_ENDER, 1], in: [[I.ENDER_PEARL, 1], [I.BLAZE_POWDER, 1]] },
   { out: [B.QUARTZ_BLOCK, 1], in: [[I.QUARTZ, 4]], table: true },
   { out: [B.ENCH_TABLE, 1], in: [[I.DIAMOND, 2], [B.OBSIDIAN, 4], [I.LEATHER, 3]], table: true },
+  { out: [B.LEVER_OFF, 1], in: [[I.STICK, 1], [B.COBBLE, 1]] },
+  { out: [B.BUTTON_OFF, 1], in: [[B.STONE, 1]] },
+  { out: [B.PLATE_OFF, 1], in: [[B.STONE, 2]] },
+  { out: [B.RS_TORCH, 1], in: [[I.REDSTONE, 1], [I.STICK, 1]] },
+  { out: [B.LAMP_OFF, 1], in: [[I.REDSTONE, 4], [B.GLOWSTONE, 1]], table: true },
+  { out: [B.REDSTONE_BLOCK, 1], in: [[I.REDSTONE, 9]], table: true },
+  { out: [I.REDSTONE, 9], in: [[B.REDSTONE_BLOCK, 1]] },
   { out: [B.NETHER_BRICK, 1], in: [[I.NETHER_BRICK_ITEM, 4]], table: true },
   { out: [B.COBBLE_SLAB, 6], in: [[B.COBBLE, 3]], table: true },
   { out: [B.STONE_SLAB, 6], in: [[B.STONE, 3]], table: true },
@@ -540,6 +575,7 @@ const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLA
   I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH,
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
   I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD,
+  B.REDSTONE_ORE, B.LEVER_OFF, B.BUTTON_OFF, B.PLATE_OFF, B.RS_TORCH, B.LAMP_OFF, B.REDSTONE_BLOCK, I.REDSTONE,
   B.ENCH_TABLE, B.OBSIDIAN, B.GRAVEL, B.NETHERRACK, B.SOUL_SAND, B.GLOWSTONE, B.QUARTZ_ORE, B.NETHER_BRICK, B.QUARTZ_BLOCK, B.END_STONE, B.EPF, B.DRAGON_EGG,
   I.FLINT, I.FLINT_STEEL, I.BUCKET, I.WATER_BUCKET, I.LAVA_BUCKET, I.QUARTZ, I.BLAZE_ROD, I.BLAZE_POWDER, I.ENDER_PEARL, I.EYE_OF_ENDER,
   I.GHAST_TEAR, I.NETHER_BRICK_ITEM];
@@ -1298,7 +1334,9 @@ function setBlock(x, y, z, id, batch) {
     m0.set(i, id); scheduleSave();
     return;
   }
+  const old = c.data[i];
   c.data[i] = id;
+  if (!rsBusy && (BLOCKS[old].rs || BLOCKS[id].rs || id === B.TNT || BLOCKS[id].door)) rsQueue.push([x, y, z]);
   let m = edits.get(k);
   if (!m) { m = new Map(); edits.set(k, m); }
   m.set(i, id);
@@ -1493,6 +1531,22 @@ atlasCanvas.width = TILE * NT; atlasCanvas.height = TILE;
   tile(T.END_PORTAL, () => { const r = rnd(); return r < 0.05 ? nz([200, 230, 255], 30) : r < 0.1 ? nz([80, 200, 180], 30) : nz([12, 14, 26], 8); });
   tile(T.DRAGON_EGG, () => rnd() < 0.1 ? nz([120, 40, 160], 20) : nz([22, 12, 28], 8));
   tile(T.QUARTZ_BLOCK, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15) ? nz([210, 204, 196], 6) : nz([238, 234, 228], 8));
+  tile(T.REDSTONE_ORE, (x, y) => ((x * 7 + y * 3) % 9 === 0 || (x * 5 + y * 11) % 13 === 0) ? nz([220, 30, 20], 20) : stone());
+  const dust = on => (x, y) => {
+    const cross = Math.abs(x - 7.5) < 1.6 || Math.abs(y - 7.5) < 1.6, dot = Math.hypot(x - 7.5, y - 7.5) < 3;
+    if (!cross && !dot) return [0, 0, 0, 0];
+    return on ? nz([255, 40, 20], 30) : nz([110, 10, 10], 16);
+  };
+  tile(T.DUST_OFF, dust(false)); tile(T.DUST_ON, dust(true));
+  tile(T.LEVER, (x, y) => (x + y) % 5 === 0 ? nz([110, 110, 110], 10) : nz([150, 118, 70], 16));
+  tile(T.RS_TORCH, (x, y) => {
+    if (x < 7 || x > 8 || y < 6) return [0, 0, 0, 0];
+    if (y <= 7) return x === 7 ? [255, 90, 70] : [210, 20, 20];
+    return nz([120, 88, 48], 14);
+  });
+  tile(T.LAMP_OFF, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15 || x === 7 || y === 7) ? nz([90, 50, 30], 10) : nz([130, 80, 50], 14));
+  tile(T.LAMP_ON, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15 || x === 7 || y === 7) ? nz([170, 110, 50], 10) : nz([255, 220, 140], 14));
+  tile(T.REDSTONE_BLOCK, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15) ? nz([140, 10, 10], 10) : nz([200, 24, 20], 18));
   tile(T.ENCH_TOP, (x, y) => {
     if (x === 0 || y === 0 || x === 15 || y === 15) return nz([22, 16, 34], 8);
     if (x >= 4 && x <= 11 && y >= 4 && y <= 11) return (x === 7 || x === 8) ? nz([120, 90, 60], 8) : nz([200, 40, 40], 14); // 펼친 책
@@ -1594,6 +1648,11 @@ function drawItemIcon(g, id) {
       if (y < 5) { if (x > 6 && x < 9 || (y > 1 && y < 4)) px(x, y, y < 2 ? [255, 244, 170] : y < 3 ? [255, 206, 80] : [236, 130, 34], 10); }
       else if (x > 6 && x < 9) px(x, y, [120, 88, 48]);
     }
+  } else if (id === B.RS_TORCH) {
+    for (let y = 1; y < 15; y++) for (let x = 6; x < 10; x++) {
+      if (y < 5) { if (x > 6 && x < 9 || (y > 1 && y < 4)) px(x, y, y < 2 ? [255, 120, 100] : [220, 24, 20], 10); }
+      else if (x > 6 && x < 9) px(x, y, [120, 88, 48]);
+    }
   } else if (id === I.STICK) {
     for (let y = 2; y < 14; y++) { px(14 - y, y, [120, 86, 44]); px(15 - y, y, [96, 68, 34]); }
   } else if (id === I.APPLE) {
@@ -1640,6 +1699,8 @@ function drawItemIcon(g, id) {
       const d = Math.hypot(x - 7.5, y - 7.5);
       if (d < 6) px(x, y, eye && d < 2 ? [20, 40, 30] : eye && Math.abs(y - 7.5) < 2.2 ? [150, 220, 120] : (x < 7 && y < 7 ? [120, 230, 200] : [30, 110, 100]), 10);
     }
+  } else if (id === I.REDSTONE) {
+    for (let k = 0; k < 44; k++) { const a = r() * 6.283, d = r() * 5.5; px(Math.round(7.5 + Math.cos(a) * d), Math.round(9 + Math.sin(a) * d * 0.7), r() < 0.5 ? [240, 30, 20] : [150, 10, 10], 10); }
   } else if (id === I.NETHER_BRICK_ITEM) {
     for (let y = 5; y < 11; y++) for (let x = 2; x < 14; x++) px(x, y, y === 5 ? [90, 44, 50] : [62, 30, 34], 10);
   } else if (id === I.DOOR) {
@@ -1709,9 +1770,9 @@ function icon(id) {
   if (iconCache.has(id)) return iconCache.get(id);
   const c = document.createElement('canvas'); c.width = c.height = 32;
   const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
-  if (id < 100 && BLOCKS[id].cross) {
+  if (isBlk(id) && BLOCKS[id].cross) {
     g.drawImage(atlasCanvas, BLOCKS[id].tex[0] * TILE, 0, TILE, TILE, 0, 0, 32, 32);
-  } else if (id < 100 && !BLOCKS[id].torch) {
+  } else if (isBlk(id) && !BLOCKS[id].torch) {
     const b = BLOCKS[id];
     g.setTransform(14 / 16, 7 / 16, -14 / 16, 7 / 16, 16, 2); g.drawImage(faceCanvas(b.tex[0], 0), 0, 0);
     g.setTransform(14 / 16, 7 / 16, 0, 15 / 16, 2, 9); g.drawImage(faceCanvas(b.tex[2], 0.32), 0, 0);
@@ -1997,7 +2058,7 @@ function buildMesh(c) {
 function emitTorch(out, x, y, z, blk, sky) {
   const [dx, dz] = blk.torch, w = 1 / 16, h = 10 / 16;
   const px = x + 0.5 + dx * 0.32, pz = z + 0.5 + dz * 0.32, py = y + (dx || dz ? 0.22 : 0);
-  const u0 = (T.TORCH + 7 / 16) / NT, uw = (2 / 16) / NT;
+  const u0 = (blk.tex[0] + 7 / 16) / NT, uw = (2 / 16) / NT;
   for (const f of FACES) {
     const base = out.pos.length / 3;
     for (const cr of f.corners) {
@@ -2462,7 +2523,7 @@ function craft(r) {
 const drops = [];
 const dropGeoCache = new Map(), spriteMatCache = new Map();
 function dropMesh(id) {
-  if (id < 100 && !BLOCKS[id].torch && !BLOCKS[id].cross) {
+  if (isBlk(id) && !BLOCKS[id].torch && !BLOCKS[id].cross) {
     let g = dropGeoCache.get(id);
     if (!g) {
       g = new THREE.BoxGeometry(0.25, 0.25, 0.25);
@@ -3755,6 +3816,131 @@ function renderTrades(box, title, note) {
     box.appendChild(btn);
   }
 }
+// ── 레드스톤 ──
+// setBlock이 바뀐 자리를 rsQueue에 넣고, 매 프레임 rsTick이 모아서 회로 전체를 다시 계산함
+const rsQueue = [], rsTimers = new Map(), dustLevel = new Map(), rsDoors = new Set();
+let rsBusy = false;
+const N6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+const isDust = id => id === B.DUST_OFF || id === B.DUST_ON;
+const srcOn = id => BLOCKS[id].rs === 'source' && BLOCKS[id].on;
+function dustLv(x, y, z) {
+  const id = getBlock(x, y, z);
+  if (!isDust(id)) return 0;
+  const v = dustLevel.get(ckey(x, y, z));
+  return v !== undefined ? v : id === B.DUST_ON ? 15 : 0;
+}
+// 가루가 이어지는 이웃: 같은 높이 4방향 + 한 칸 위아래 대각선
+function dustLinks(x, y, z) {
+  const out = [];
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (const dy of [0, 1, -1]) {
+    if (isDust(getBlock(x + dx, y + dy, z + dz))) out.push([x + dx, y + dy, z + dz]);
+  }
+  return out;
+}
+// 강한 신호: 블록 아래의 레드스톤 횃불, 블록 위에 붙은 켜진 레버/버튼/압력판
+function strongPowered(x, y, z) {
+  if (!LOP[getBlock(x, y, z)]) return false;
+  const up = getBlock(x, y + 1, z);
+  return getBlock(x, y - 1, z) === B.RS_TORCH || (srcOn(up) && up !== B.RS_TORCH && up !== B.REDSTONE_BLOCK);
+}
+// 약한 신호: 위에 켜진 가루가 있거나, 이 블록을 향해 끝나는 가루가 옆에 있음
+function weakPowered(x, y, z) {
+  if (!LOP[getBlock(x, y, z)]) return false;
+  if (dustLv(x, y + 1, z) > 0) return true;
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    if (dustLv(x + dx, y, z + dz) <= 0) continue;
+    const links = dustLinks(x + dx, y, z + dz);
+    if (links.length === 0 || (links.length === 1 && links[0][0] === x + 2 * dx && links[0][2] === z + 2 * dz)) return true;
+  }
+  return false;
+}
+// 램프, 문, TNT 같은 장치가 신호를 받는지
+function devicePowered(x, y, z) {
+  for (const [dx, dy, dz] of N6) {
+    const nx = x + dx, ny = y + dy, nz = z + dz, id = getBlock(nx, ny, nz);
+    if (srcOn(id)) return true;
+    if (isDust(id) && dustLv(nx, ny, nz) > 0 && dy !== 1) return true;
+    if (strongPowered(nx, ny, nz) || weakPowered(nx, ny, nz)) return true;
+  }
+  return false;
+}
+function rsProcess(seeds) {
+  // 1) 바뀐 자리 주변의 가루에서 시작해 이어진 회로 전체를 모음
+  const net = new Map(), stack = [];
+  const addDust = (x, y, z) => { const k = ckey(x, y, z); if (!net.has(k) && isDust(getBlock(x, y, z))) { net.set(k, [x, y, z]); stack.push([x, y, z]); } };
+  for (const [x, y, z] of seeds) for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) addDust(x + dx, y + dy, z + dz);
+  while (stack.length && net.size < 3000) { const [x, y, z] = stack.pop(); for (const [a, b, c] of dustLinks(x, y, z)) addDust(a, b, c); }
+  // 2) 신호원 옆 가루는 15, 한 칸 갈 때마다 1씩 약해짐
+  const lv = new Map(), q = [];
+  for (const [k, [x, y, z]] of net) {
+    let src = false;
+    for (const [dx, dy, dz] of N6) if (srcOn(getBlock(x + dx, y + dy, z + dz)) || strongPowered(x + dx, y + dy, z + dz)) { src = true; break; }
+    lv.set(k, src ? 15 : 0);
+    if (src) q.push([x, y, z, 15]);
+  }
+  while (q.length) {
+    const [x, y, z, l] = q.shift();
+    if (l <= 1) continue;
+    for (const [a, b, c] of dustLinks(x, y, z)) {
+      const k = ckey(a, b, c);
+      if ((lv.get(k) || 0) < l - 1) { lv.set(k, l - 1); q.push([a, b, c, l - 1]); }
+    }
+  }
+  rsBusy = true;
+  for (const [k, [x, y, z]] of net) {
+    const l = lv.get(k) || 0;
+    dustLevel.set(k, l);
+    const want = l > 0 ? B.DUST_ON : B.DUST_OFF;
+    if (getBlock(x, y, z) !== want) setBlock(x, y, z, want);
+  }
+  rsBusy = false;
+  // 3) 회로와 바뀐 자리 둘레(2칸)의 장치를 갱신
+  const seen = new Set(), around = [...seeds, ...net.values()];
+  for (const [x, y, z] of around) for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) for (let dz = -2; dz <= 2; dz++) {
+    if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) > 3) continue;
+    const ax = x + dx, ay = y + dy, az = z + dz, k = ckey(ax, ay, az);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const id = getBlock(ax, ay, az);
+    if (id === B.LAMP_OFF || id === B.LAMP_ON) {
+      const want = devicePowered(ax, ay, az) ? B.LAMP_ON : B.LAMP_OFF;
+      if (want !== id) { rsBusy = true; setBlock(ax, ay, az, want); rsBusy = false; }
+    } else if (id === B.TNT) {
+      if (devicePowered(ax, ay, az)) { rsBusy = true; setBlock(ax, ay, az, B.AIR); rsBusy = false; primeTnt(ax, ay, az, 3); }
+    } else if (BLOCKS[id].door && !BLOCKS[id].door.top) {
+      const pw = devicePowered(ax, ay, az) || devicePowered(ax, ay + 1, az), open = BLOCKS[id].door.open;
+      if (pw && !open) { rsBusy = true; toggleDoor(ax, ay, az); rsBusy = false; rsDoors.add(k); }
+      else if (!pw && open && rsDoors.has(k)) { rsBusy = true; toggleDoor(ax, ay, az); rsBusy = false; rsDoors.delete(k); }
+    } else if (id === B.RS_TORCH || id === B.RS_TORCH_OFF) {
+      // 받침 블록에 신호가 들어오면 꺼짐 (0.1초 뒤) → NOT 게이트, 시계 회로
+      const want = strongPowered(ax, ay - 1, az) || weakPowered(ax, ay - 1, az) ? B.RS_TORCH_OFF : B.RS_TORCH;
+      if (want !== id && !rsTimers.has(k)) rsTimers.set(k, { x: ax, y: ay, z: az, t: 0.1, to: want, from: id });
+    }
+  }
+}
+function rsTick(dt) {
+  for (const [k, tm] of rsTimers) {
+    tm.t -= dt;
+    if (tm.t > 0) continue;
+    rsTimers.delete(k);
+    if (getBlock(tm.x, tm.y, tm.z) === tm.from) {
+      setBlock(tm.x, tm.y, tm.z, tm.to);
+      if (tm.to === B.BUTTON_OFF || tm.to === B.PLATE_OFF) sfxTone(520, 0.05, { type: 'square', vol: 0.1 });
+    }
+  }
+  // 압력판: 플레이어나 몹이 올라서면 눌림, 내려오고 0.5초 뒤 풀림
+  const onPlate = e => {
+    const x = Math.floor(e.pos.x), y = Math.floor(e.pos.y + 0.05), z = Math.floor(e.pos.z), id = getBlock(x, y, z);
+    if (id !== B.PLATE_OFF && id !== B.PLATE_ON) return;
+    if (id === B.PLATE_OFF) { setBlock(x, y, z, B.PLATE_ON); sfxTone(620, 0.05, { type: 'square', vol: 0.1 }); }
+    rsTimers.set(ckey(x, y, z), { x, y, z, t: 0.5, to: B.PLATE_OFF, from: B.PLATE_ON });
+  };
+  if (!player.dead) onPlate(player);
+  for (const m of mobs) if (!m.def.flying) onPlate(m);
+  if (!rsQueue.length) return;
+  const seeds = rsQueue.splice(0, rsQueue.length);
+  rsProcess(seeds);
+}
 // 문: 위아래 두 칸을 함께 열고 닫음
 function doorPartner(x, y, z) { return BLOCKS[getBlock(x, y, z)].door.top ? y - 1 : y + 1; }
 function toggleDoor(x, y, z) {
@@ -3818,7 +4004,7 @@ function breakBlockAt(hit) {
   if (harvest) {
     const fortune = enchLv(heldItem(), 'fortune'), oreXp = ORE_XP[hit.id] || 0;
     for (const [d, n] of blockDrops(hit.id)) {
-      const bonus = oreXp && d < 100 ? 0 : oreXp ? Math.max(0, Math.floor(Math.random() * (fortune + 2)) - 1) : 0;
+      const bonus = oreXp && isBlk(d) ? 0 : oreXp ? Math.max(0, Math.floor(Math.random() * (fortune + 2)) - 1) : 0;
       spawnDrop(d, n + bonus, hit.x + 0.5, hit.y + 0.3, hit.z + 0.5, null, undefined, 0.2);
     }
     if (oreXp) spawnOrbs(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5, oreXp);
@@ -3826,7 +4012,7 @@ function breakBlockAt(hit) {
   if (it && it.tool) wearSelected(it.tool === 'sword' ? 2 : 1);
 }
 // 경험치: 몹, 광석, 굽기로 얻음. 레벨마다 필요한 양이 늘어남
-const ORE_XP = { [B.COAL_ORE]: 1, [B.DIAMOND_ORE]: 5, [B.QUARTZ_ORE]: 3 };
+const ORE_XP = { [B.COAL_ORE]: 1, [B.DIAMOND_ORE]: 5, [B.QUARTZ_ORE]: 3, [B.REDSTONE_ORE]: 2 };
 const xpNeed = L => L < 16 ? 2 * L + 7 : L < 31 ? 5 * L - 38 : 9 * L - 158;
 function addXp(n) {
   if (mode !== 'survival') return;
@@ -3880,6 +4066,7 @@ function blockDrops(id) {
   if (id === B.LEAVES) return Math.random() < 0.06 ? [[I.APPLE, 1]] : [];
   if (id === B.TALL_GRASS) return Math.random() < 0.15 ? [[I.SEEDS, 1]] : [];
   if (id === B.GRAVEL) return Math.random() < 0.15 ? [[I.FLINT, 1]] : [[B.GRAVEL, 1]];
+  if (id === B.REDSTONE_ORE) return [[I.REDSTONE, 4 + (Math.random() * 2 | 0)]];
   if (b.crop !== undefined) return b.crop === 3 ? [[I.WHEAT, 1], [I.SEEDS, 1 + (Math.random() * 3 | 0)]] : [[I.SEEDS, 1]];
   const d = b.drop === undefined ? id : b.drop;
   return d ? [[d, 1]] : [];
@@ -3979,6 +4166,15 @@ function useItem() {
   if (hit && hit.id === B.CHEST && !sneaking) { openChestAt(hit.x, hit.y, hit.z); return; }
   if (hit && hit.id === B.BED && !sneaking) { sleepAt(hit.x, hit.y, hit.z); return; }
   if (hit && BLOCKS[hit.id].door && !sneaking) { toggleDoor(hit.x, hit.y, hit.z); return; }
+  if (hit && (hit.id === B.LEVER_OFF || hit.id === B.LEVER_ON) && !sneaking) {
+    setBlock(hit.x, hit.y, hit.z, hit.id === B.LEVER_OFF ? B.LEVER_ON : B.LEVER_OFF); swingHand();
+    sfxTone(hit.id === B.LEVER_OFF ? 700 : 560, 0.05, { type: 'square', vol: 0.12 }); return;
+  }
+  if (hit && (hit.id === B.BUTTON_OFF || hit.id === B.BUTTON_ON) && !sneaking) {
+    setBlock(hit.x, hit.y, hit.z, B.BUTTON_ON); swingHand();
+    rsTimers.set(ckey(hit.x, hit.y, hit.z), { x: hit.x, y: hit.y, z: hit.z, t: 1, to: B.BUTTON_OFF, from: B.BUTTON_ON });
+    sfxTone(760, 0.05, { type: 'square', vol: 0.12 }); return;
+  }
   if (hit && hit.id === B.TNT && !sneaking) { setBlock(hit.x, hit.y, hit.z, B.AIR); primeTnt(hit.x, hit.y, hit.z, 3); return; }
   const s = heldItem();
   if (!s) return;
@@ -4042,26 +4238,28 @@ function useItem() {
     } else if (mode === 'survival') toast('배가 부릅니다');
     return;
   }
-  if (!info.block || !hit) return;
+  if ((!info.block && !info.placeAs) || !hit) return;
   const x = hit.x + hit.n[0], y = hit.y + hit.n[1], z = hit.z + hit.n[2];
   if (y < 1 || y >= CH) return;
   const cur = getBlock(x, y, z);
   if (cur !== B.AIR && cur !== B.WATER) return;
-  let placeId = s.id;
+  let placeId = info.placeAs || s.id;
   const look = lookDir(), facing = Math.abs(look.x) > Math.abs(look.z) ? (look.x > 0 ? 1 : 3) : (look.z > 0 ? 2 : 0);
-  if (BLOCKS[s.id].family !== undefined) placeId = BLOCKS[s.id].family + facing;
+  if (BLOCKS[placeId].family !== undefined) placeId = BLOCKS[placeId].family + facing;
   if (s.id === B.TORCH) {
     // 바닥 위에는 세워서, 벽에는 붙여서. 천장이나 물속, 빛을 통과하는 블록에는 못 붙임
     const n = hit.n;
     if (n[1] === -1 || cur === B.WATER || !LOP[hit.id]) return;
     placeId = n[1] === 1 ? B.TORCH : n[0] === 1 ? B.TORCH_WX : n[0] === -1 ? B.TORCH_EX : n[2] === 1 ? B.TORCH_NZ : B.TORCH_SZ;
   }
-  if (BLOCKS[placeId].needsGround) {
+  if (BLOCKS[placeId].rs && BLOCKS[placeId].needsGround) {
+    if (hit.n[1] !== 1 || !LOP[hit.id] || cur === B.WATER) return;
+  } else if (BLOCKS[placeId].needsGround) {
     const okGround = placeId === B.CACTUS ? (hit.id === B.SAND || hit.id === B.CACTUS) : [B.GRASS, B.DIRT, B.SNOW, B.FARMLAND].includes(hit.id);
     if (hit.n[1] !== 1 || !okGround || cur === B.WATER) return;
   }
   const p = player.pos, hw = player.hw;
-  if (SOLID[s.id] && x + 1 > p.x - hw && x < p.x + hw && y + 1 > p.y && y < p.y + player.h && z + 1 > p.z - hw && z < p.z + hw) return;
+  if (SOLID[placeId] && x + 1 > p.x - hw && x < p.x + hw && y + 1 > p.y && y < p.y + player.h && z + 1 > p.z - hw && z < p.z + hw) return;
   for (const m of mobs) if (x + 1 > m.pos.x - m.hw && x < m.pos.x + m.hw && y + 1 > m.pos.y && y < m.pos.y + m.h && z + 1 > m.pos.z - m.hw && z < m.pos.z + m.hw) return;
   setBlock(x, y, z, placeId);
   swingHand();
@@ -4206,7 +4404,7 @@ function refreshHand() {
   if (!s) {
     m = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.5), handSkinMat);
     m.position.set(0.05, -0.05, 0.1); m.rotation.set(0.2, -0.2, 0);
-  } else if (id < 100 && !BLOCKS[id].cross && !BLOCKS[id].torch) {
+  } else if (isBlk(id) && !BLOCKS[id].cross && !BLOCKS[id].torch) {
     m = new THREE.Mesh(dropMesh(id).geometry, handBlockMat);
     m.scale.setScalar(0.8); m.rotation.set(0.3, 0.7, 0); m.position.set(0.05, 0.02, -0.05);
   } else {
@@ -5062,6 +5260,7 @@ function frame(now) {
     updateOrbs(dt);
     updateHand(dt);
     growCrops(dt);
+    rsTick(dt);
     updateBoats(dt);
   } else { highlight.visible = false; crack.visible = false; }
   updateSky(active ? dt : 0);
