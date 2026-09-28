@@ -42,6 +42,13 @@
     text-shadow: 1px 1px 0 var(--shadow); pointer-events: none; font-variant-numeric: tabular-nums; white-space: pre; color: #e8d8ff; }
   #info { position: fixed; left: 10px; top: calc(10px + env(safe-area-inset-top, 0px)); font-size: 12px; line-height: 1.5;
     text-shadow: 1px 1px 0 var(--shadow); pointer-events: none; font-variant-numeric: tabular-nums; white-space: pre; }
+  #achtoast { position: fixed; right: 12px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); padding: 6px 12px; background: var(--panel); border: 2px solid #c8a832;
+    pointer-events: none; opacity: 0; transform: translateY(8px); transition: opacity .4s, transform .4s; display: flex; flex-direction: column; }
+  #achtoast.show { opacity: 1; transform: none; }
+  #achtoast small { color: #f0d060; font-size: 11px; } #achtoast b { font-size: 14px; }
+  #achlist { margin: 6px 0 10px; } #achlist summary { cursor: pointer; }
+  #achlist ul { list-style: none; padding: 0; margin: 6px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 12px; font-size: 12px; }
+  #achlist li { opacity: .45; } #achlist li.done { opacity: 1; } #achlist li.done::before { content: '★ '; color: #f0d060; } #achlist li:not(.done)::before { content: '☆ '; }
   #toast { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); font-size: 15px; padding: 6px 12px; background: var(--panel);
     border: 2px solid var(--panel-edge); pointer-events: none; opacity: 0; transition: opacity .4s; white-space: nowrap; max-width: calc(100vw - 32px); }
   #hud { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom, 0px));
@@ -154,7 +161,7 @@
 <div id="steer-ring" hidden></div>
 <div id="steer-dot" hidden></div>
 <div id="info"></div>
-<div id="toast"></div>
+<div id="toast"></div><div id="achtoast"><small>도전 과제 달성!</small><b></b></div>
 <div id="blockname"></div>
 <div id="sleep"></div>
 <div id="bossbar" hidden><b>엔더 드래곤</b><div class="bb-track"><i id="bb-fill"></i></div></div>
@@ -229,6 +236,7 @@
       <input id="set-volume" type="range" min="0" max="1" step="0.05">
       <label class="check"><input id="set-music" type="checkbox"> 배경 음악</label>
     </div>
+    <details id="achlist"><summary>도전 과제</summary><ul></ul></details>
     <p id="modeline"></p>
     <div class="btns">
       <button id="play" type="button" disabled>플레이</button>
@@ -665,6 +673,7 @@ let SEED = save && save.seed ? save.seed : (Math.random() * 1e9) | 0;
 let mode = save ? (save.mode || 'creative') : 'survival';
 // 차원: overworld(지상) / nether / end. 블록 편집은 차원별로 따로 저장
 let dim = save && save.dim ? save.dim : 'overworld';
+const achDone = new Set(save && save.ach || []); // 달성한 도전 과제
 const editsByDim = { overworld: new Map(), nether: new Map(), end: new Map() };
 const loadEdits = (src, m) => { if (src) for (const k in src) m.set(k, new Map(src[k])); };
 loadEdits(save && save.edits, editsByDim.overworld);
@@ -706,6 +715,7 @@ function writeSave() {
   const dump = m => { const o = {}; for (const [k, v] of m) if (v.size) o[k] = [...v]; return o; };
   obj.edits = dump(editsByDim.overworld); obj.editsN = dump(editsByDim.nether); obj.editsE = dump(editsByDim.end);
   obj.pets = mobs.filter(m => m.tamed).map(m => [+m.pos.x.toFixed(1), +m.pos.y.toFixed(1), +m.pos.z.toFixed(1), m.hp]);
+  obj.ach = [...achDone];
   obj.weather = [weather.target, Math.round(weather.timer), weather.thunder];
   obj.dim = dim; obj.dragonDead = endState.dragonDead; obj.crystalsGone = [...endState.crystalsGone];
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(obj)); } catch (e) { /* 저장할 수 없는 환경 */ }
@@ -2675,6 +2685,7 @@ function addTo(arr, id, count, dur, ench) {
   return count;
 }
 function addItem(id, count, dur, ench) {
+  if (ACH_ITEM[id]) grant(ACH_ITEM[id]);
   count = addTo(inv, id, count, dur, ench);
   refreshInvUI();
   scheduleSave();
@@ -3171,6 +3182,7 @@ function setupEndMobs() {
   d.state = 'circle'; d.stateT = 10;
 }
 function dragonDefeated() {
+  grant('dragon');
   endState.dragonDead = true;
   const batch = new Set();
   for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) if (Math.hypot(dx, dz) < 2.5 && (dx || dz)) setBlock(dx, END_TOP, dz, B.END_PORTAL, batch);
@@ -3240,7 +3252,7 @@ function updateMob(m, dt) {
         m.love = mate.love = 0; m.breedCd = mate.breedCd = 60;
         const baby = spawnMob(m.type, (m.pos.x + mate.pos.x) / 2, Math.max(m.pos.y, mate.pos.y) + 0.1, (m.pos.z + mate.pos.z) / 2);
         baby.baby = 300; baby.hw = m.def.hw * 0.55; baby.h = m.def.h * 0.55;
-        spawnHearts(baby.pos.x, baby.pos.y + 0.6, baby.pos.z, 6); spawnOrbs(baby.pos.x, baby.pos.y + 0.5, baby.pos.z, 1 + (Math.random() * 6 | 0));
+        spawnHearts(baby.pos.x, baby.pos.y + 0.6, baby.pos.z, 6); grant('breed'); spawnOrbs(baby.pos.x, baby.pos.y + 0.5, baby.pos.z, 1 + (Math.random() * 6 | 0));
       }
     }
   }
@@ -3570,6 +3582,7 @@ function switchDim(nd, x, y, z) {
   orbs.length = 0;
   crops.clear(); spawners.clear();
   dim = nd; edits = editsByDim[nd];
+  if (nd !== 'overworld') grant(nd);
   player.pos.set(x, y, z); player.vel.set(0, 0, 0); player.peakY = y; player.burn = 0;
   for (const hp of pets) { const w = spawnMob('wolf', x + (Math.random() - 0.5) * 2, y + 0.3, z + (Math.random() - 0.5) * 2); tameWolf(w); w.hp = hp; }
   applyDimVisuals();
@@ -4197,6 +4210,44 @@ function musicTick(dt) {
   }
   pianoNote(root / 2, when, 0.035);
 }
+// ── 도전 과제 ──
+const ACH = [
+  ['wood', '나무꾼', '나무를 캐기'], ['bench', '공방', '작업대 만들기'], ['stone', '석기 시대', '조약돌 얻기'],
+  ['iron', '쇠를 다루다', '철괴 얻기'], ['diamond', '다이아몬드!', '다이아몬드 얻기'], ['redstone', '전기 기술자', '레드스톤 가루 얻기'],
+  ['kill', '몬스터 사냥꾼', '몬스터 쓰러뜨리기'], ['sleep', '좋은 꿈', '침대에서 자기'], ['fish', '강태공', '물고기 낚기'],
+  ['breed', '새 생명', '동물 새끼 태어나게 하기'], ['wolf', '가장 좋은 친구', '늑대 길들이기'], ['obsidian', '단단한 돌', '흑요석 얻기'],
+  ['nether', '지옥으로', '네더에 들어가기'], ['blaze', '불 속의 막대', '블레이즈 막대 얻기'], ['potion', '양조사', '물약 만들기'],
+  ['enchant', '마법사', '마법 부여하기'], ['eye', '엔더의 눈', '엔더의 눈 만들기'], ['end', '끝으로', '엔드에 들어가기'],
+  ['dragon', '용 사냥꾼', '엔더 드래곤 쓰러뜨리기'],
+];
+const ACH_ITEM = { [B.LOG]: 'wood', [B.BIRCH_LOG]: 'wood', [B.TABLE]: 'bench', [B.COBBLE]: 'stone', [I.IRON_INGOT]: 'iron', [I.DIAMOND]: 'diamond',
+  [I.REDSTONE]: 'redstone', [I.RAW_FISH]: 'fish', [B.OBSIDIAN]: 'obsidian', [I.BLAZE_ROD]: 'blaze', [I.EYE_OF_ENDER]: 'eye' };
+for (const p of POTIONS) ACH_ITEM[p[0]] = 'potion';
+const achEl = document.getElementById('achtoast');
+let achTimer = null;
+function grant(id) {
+  if (achDone.has(id) || mode !== 'survival') return;
+  const a = ACH.find(x => x[0] === id);
+  if (!a) return;
+  achDone.add(id);
+  achEl.querySelector('b').textContent = a[1];
+  achEl.classList.add('show');
+  clearTimeout(achTimer); achTimer = setTimeout(() => achEl.classList.remove('show'), 3500);
+  sfxTone(660, 0.2, { type: 'triangle', vol: 0.1 }); sfxTone(880, 0.3, { type: 'triangle', vol: 0.1, delay: 0.15 }); sfxTone(1320, 0.5, { vol: 0.06, delay: 0.3 });
+  renderAchList(); scheduleSave();
+}
+function renderAchList() {
+  const ul = document.querySelector('#achlist ul');
+  ul.innerHTML = '';
+  for (const [id, title, desc] of ACH) {
+    const li = document.createElement('li');
+    li.className = achDone.has(id) ? 'done' : '';
+    li.textContent = title + ' — ' + desc;
+    ul.appendChild(li);
+  }
+  document.querySelector('#achlist summary').textContent = `도전 과제 (${achDone.size}/${ACH.length})`;
+}
+renderAchList();
 // ── 물약 효과 ──
 const effectsEl = document.getElementById('effects');
 function updateEffectsHud() {
@@ -4431,6 +4482,7 @@ function sleepAt(x, y, z) {
   if (weather.target > 0) { weather.target = 0; weather.rain = 0; weather.timer = 600 + Math.random() * 800; }
   player.hp = Math.min(20, player.hp + 6); updateHearts();
   toast('아침이 되었습니다. 부활 위치를 이 침대로 정했습니다');
+  grant('sleep');
 }
 function breakBlockAt(hit) {
   spawnBlockParticles(hit.id, hit.x, hit.y, hit.z, 14);
@@ -4607,6 +4659,7 @@ function attack(m) {
   sfx.hit();
   hurtMob(m, dmg, { x: dx / l, z: dz / l });
   if (!m.def.passive) wolvesDefend(m);
+  if (m.hp <= 0 && !m.def.passive && !m.tamed) grant('kill');
   exhaust(0.1);
   if (it && it.tool) wearSelected(it.tool === 'sword' ? 1 : 2);
 }
@@ -4624,7 +4677,7 @@ function interactAnimal(m) {
   }
   if (m.type === 'wolf' && !m.tamed && id === I.BONE && !m.angry) {
     consumeSelected(); swingHand();
-    if (Math.random() < 0.34) { tameWolf(m); toast('늑대를 길들였습니다'); }
+    if (Math.random() < 0.34) { tameWolf(m); toast('늑대를 길들였습니다'); grant('wolf'); }
     else spawnBlockParticles(B.STONE, m.pos.x - 0.5, m.pos.y, m.pos.z - 0.5, 3);
     return true;
   }
@@ -5246,7 +5299,7 @@ function renderEnchant(box, title, note) {
       st.ench = { ...(st.ench || {}) };
       for (const [k, v] of Object.entries(opt.ench)) st.ench[k] = Math.max(st.ench[k] || 0, v);
       if (mode !== 'creative') { player.level -= opt.cost; updateXpBar(); }
-      player.enchSeed++;
+      player.enchSeed++; grant('enchant');
       sfxTone(520, 0.4, { type: 'triangle', vol: 0.1, to: 1040 }); sfxTone(780, 0.5, { vol: 0.06, delay: 0.1, to: 1560 });
       refreshInvUI(); scheduleSave();
     });
@@ -5714,6 +5767,7 @@ function newWorld(newMode) {
   while (mobs.length) removeMob(mobs[0]);
   while (drops.length) removeDrop(0);
   inv.fill(null); fuel = 0; armor.fill(null); chests.clear(); spawnPoint = null;
+  achDone.clear(); renderAchList();
   for (const a of arrows) scene.remove(a.mesh);
   arrows.length = 0;
   for (const t of tnts) scene.remove(t.mesh);
