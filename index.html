@@ -577,7 +577,7 @@ const POTIONS = [
   [I.P_STRENGTH, '힘의 물약', 'strength', 180, I.QUARTZ, [150, 40, 40]],
   [I.P_JUMP, '도약의 물약', 'jump', 180, I.ENDER_PEARL, [110, 230, 110]],
 ];
-const FX_NAME = { regen: '재생', speed: '신속', fire: '화염 저항', night: '야간 투시', strength: '힘', jump: '도약' };
+const FX_NAME = { poison: '독', slow: '구속', regen: '재생', speed: '신속', fire: '화염 저항', night: '야간 투시', strength: '힘', jump: '도약' };
 for (const [id, name, fx, sec, , color] of POTIONS) ITEMS[id] = { name, stack: 1, potion: { fx, sec }, color };
 ITEMS[I.FISHING_ROD] = { name: '낚싯대', stack: 1, dur: 64, rod: true };
 ITEMS[I.RAW_FISH] = { name: '생선', stack: 64, food: 2, sat: 0.4 };
@@ -2558,6 +2558,7 @@ function physics(dt) {
   const sprint = shift && !player.flying && (mode !== 'survival' || player.food > 6);
   let speed = player.flying ? 10 : (sprint ? 5.8 : 4.3);
   if (player.fx.speed > 0 && !player.flying) speed *= 1.35;
+  if (player.fx.slow > 0 && !player.flying) speed *= 0.6;
   if (player.blocking) speed *= 0.35;
   if (player.inWater && !player.flying) speed *= player.inLava ? 0.35 : 0.55;
   if (onSoul && !player.flying) speed *= 0.5;
@@ -2893,6 +2894,9 @@ const MOBTEX = {
   saddle: makeCanvasTex(4, 4, (x, y) => y === 0 ? [90, 50, 26] : [130, 76, 40], 40),
   golem: makeCanvasTex(8, 8, (x, y) => (x * 3 + y * 7) % 9 === 0 ? [150, 144, 132] : (x + y * 5) % 13 === 0 ? [90, 120, 60] : [206, 198, 184], 41),
   golemFace: makeCanvasTex(8, 8, (x, y) => (y === 3 && (x === 2 || x === 5)) ? [140, 30, 20] : (y >= 4 && y <= 6 && x >= 3 && x <= 4) ? [180, 170, 156] : [206, 198, 184], 42),
+  witchRobe: makeCanvasTex(8, 8, (x, y) => (x + y) % 5 === 0 ? [60, 30, 70] : [84, 44, 96], 46),
+  witchFace: makeCanvasTex(8, 8, (x, y) => (y === 3 && (x === 1 || x === 6)) ? [60, 160, 60] : (y === 6 && x >= 2 && x <= 5) ? [90, 60, 50] : [170, 130, 104], 47),
+  witchHat: makeCanvasTex(4, 4, (x, y) => y === 3 ? [70, 110, 40] : [30, 26, 34], 48),
   slime: makeCanvasTex(8, 8, (x, y) => (x + y * 3) % 7 === 0 ? [96, 180, 80] : [120, 204, 100], 43),
   slimeCore: makeCanvasTex(4, 4, (x, y) => [70, 150, 60], 44),
   slimeEye: makeCanvasTex(2, 2, () => [20, 40, 20], 45),
@@ -2981,6 +2985,7 @@ const MOB = {
   wolf:     { hp: 8, hw: 0.3, h: 0.85, speed: 2.8, neutral: true, melee: true, dmg: 3, drops: [] },
   zombie:   { hp: 20, hw: 0.3, h: 1.95, speed: 2.4, burns: true, melee: true, dmg: 3, drops: [[I.FLESH, 0, 2]] },
   skeleton: { hp: 20, hw: 0.3, h: 1.95, speed: 2.2, burns: true, drops: [[I.BONE, 0, 2], [I.ARROW, 0, 2]] },
+  witch:    { hp: 26, hw: 0.3, h: 1.95, speed: 2.0, burns: false, drops: [[I.BOTTLE, 0, 2], [I.REDSTONE, 0, 3], [I.GUNPOWDER, 0, 1], [B.GLOWSTONE, 0, 1]] },
   slime:    { hp: 16, hw: 1.0, h: 2.0, speed: 3, slime: true, drops: [] },
   creeper:  { hp: 20, hw: 0.3, h: 1.7, speed: 2.1, drops: [[I.GUNPOWDER, 0, 2]] },
   villager: { hp: 20, hw: 0.3, h: 1.95, passive: true, speed: 0.7, drops: [], village: true },
@@ -2992,8 +2997,8 @@ const MOB = {
   crystal:  { hp: 1, hw: 0.6, h: 1.4, passive: true, still: true, fireproof: true, drops: [] },
   spider:   { hp: 16, hw: 0.65, h: 0.9, speed: 2.9, melee: true, dmg: 2, dayNeutral: true, climbs: true, drops: [[I.STRING, 0, 2]] },
 };
-const HOSTILE = ['zombie', 'zombie', 'zombie', 'skeleton', 'skeleton', 'creeper', 'creeper', 'enderman', 'spider', 'spider'];
-const MOB_NAME = { slime: '슬라임', golem: '철 골렘', zombie: '좀비', piglin: '좀비 피글린', enderman: '엔더맨', spider: '거미', wolf: '늑대' };
+const HOSTILE = ['zombie', 'zombie', 'zombie', 'skeleton', 'skeleton', 'creeper', 'creeper', 'enderman', 'spider', 'spider', 'witch'];
+const MOB_NAME = { witch: '마녀', slime: '슬라임', golem: '철 골렘', zombie: '좀비', piglin: '좀비 피글린', enderman: '엔더맨', spider: '거미', wolf: '늑대' };
 const MEATS = new Set([I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH]);
 function buildMobModel(type) {
   const g = new THREE.Group(), legs = [], arms = [], mats = [];
@@ -3083,6 +3088,12 @@ function buildMobModel(type) {
     box(8, 4, 4, robe, 0, 19, 4); // 팔짱
     box(8, 10, 8, faced(skin, face), 0, 29, 0);
     box(2, 4, 2, skin, 0, 26, 5); // 코
+  } else if (type === 'witch') {
+    const robe = mat(MOBTEX.witchRobe), face = mat(MOBTEX.witchFace), hat = mat(MOBTEX.witchHat), skin = mat(MOBTEX.vSkin);
+    limb(-2, 12, 0, 4, 12, 4, robe, legs); limb(2, 12, 0, 4, 12, 4, robe, legs);
+    box(8, 12, 6, robe, 0, 18, 0); box(8, 4, 4, robe, 0, 19, 4);
+    box(8, 10, 8, faced(skin, face), 0, 29, 0); box(2, 5, 2, skin, 0, 26, 5);
+    box(10, 2, 10, hat, 0, 35, 0); box(7, 4, 7, hat, 0, 38, -0.5); box(4, 4, 4, hat, 0, 42, -1.5); box(2, 3, 2, hat, 0, 45, -2.5);
   } else if (type === 'slime') {
     const core = mat(MOBTEX.slimeCore), eye = mat(MOBTEX.slimeEye);
     const jelly = new THREE.MeshBasicMaterial({ map: MOBTEX.slime, transparent: true, opacity: 0.6, depthWrite: false }); mats.push(jelly);
@@ -3473,6 +3484,14 @@ function updateMob(m, dt) {
     if (!see || dist > 11) move = m.def.speed;
     else if (dist < 5) { m.targetYaw += Math.PI; move = m.def.speed * 0.8; }
     if (see && dist < 15 && m.attackCd <= 0) { shootArrow(eye, target); m.attackCd = 1.8 + Math.random(); }
+  } else if (m.type === 'witch') {
+    m.targetYaw = Math.atan2(dxp, dzp);
+    const eye = new THREE.Vector3(m.pos.x, m.pos.y + 1.6, m.pos.z), target = new THREE.Vector3(player.pos.x, player.pos.y + 1, player.pos.z);
+    const see = dist < 14 && lineOfSight(eye, target);
+    if (!see || dist > 9) move = m.def.speed;
+    else if (dist < 4) { m.targetYaw += Math.PI; move = m.def.speed * 0.8; }
+    if (m.hp < 12 && !m.drank) { m.drank = true; m.hp = Math.min(m.def.hp, m.hp + 8); sfx.eat(); spawnHearts(m.pos.x, m.pos.y + 2.2, m.pos.z, 2); }
+    if (see && dist < 12 && m.attackCd <= 0) { throwSplash(eye, target); m.attackCd = 2.5 + Math.random(); }
   } else if (m.type === 'creeper') {
     m.targetYaw = Math.atan2(dxp, dzp);
     if (dist < 2.8 && Math.abs(dyp) < 2) {
@@ -3550,6 +3569,23 @@ function shootFire(from, to, kind) {
   scene.add(mesh);
   arrows.push({ pos: from.clone(), vel: dir.multiplyScalar(kind === 'big' ? 12 : 16), mesh, life: 0, stuck: false, kind: kind === 'big' ? 'fireball' : 'smallfire' });
 }
+// 마녀의 투척 물약: 독, 구속(느림), 고통(즉시 피해) 중 하나. 떨어진 곳 둘레 3칸에 효과
+const splashMats = { poison: new THREE.MeshBasicMaterial({ color: 0x4e9a2a }), slow: new THREE.MeshBasicMaterial({ color: 0x5a6c81 }), harm: new THREE.MeshBasicMaterial({ color: 0x430a09 }) };
+function throwSplash(from, to) {
+  const fx = ['poison', 'slow', 'harm'][Math.random() * 3 | 0], t = 0.9;
+  const vel = new THREE.Vector3((to.x - from.x) / t, (to.y - from.y + 10 * t * t) / t, (to.z - from.z) / t);
+  const mesh = new THREE.Mesh(fireGeoS, splashMats[fx]);
+  scene.add(mesh);
+  arrows.push({ pos: from.clone(), vel, mesh, life: 0, stuck: false, kind: 'potion', fx });
+  sfxNoise(0.15, 1500, { q: 1, vol: 0.12 });
+}
+function splashPotion(a) {
+  sfx.glassBreak();
+  spawnBlockParticles(B.GLASS, a.pos.x - 0.5, a.pos.y - 0.5, a.pos.z - 0.5, 6);
+  if (player.dead || player.pos.distanceTo(a.pos) > 3.2) return;
+  if (a.fx === 'harm') { player.invuln = 0; damagePlayer(6, null, '마녀의 물약에 당했습니다', true); }
+  else { player.fx[a.fx] = Math.max(player.fx[a.fx] || 0, a.fx === 'poison' ? 8 : 15); updateEffectsHud(); }
+}
 function throwPearl() {
   const dir = lookDir(), from = camera.position.clone().add(dir.clone().multiplyScalar(0.5));
   const mesh = new THREE.Mesh(fireGeoS, pearlMat);
@@ -3618,6 +3654,7 @@ function updateArrows(dt) {
       continue;
     }
     if (!a.kind || a.kind === 'pearl') a.vel.y -= 20 * dt;
+    else if (a.kind === 'potion') a.vel.y -= 20 * dt;
     // 빠른 화살이 몹을 뚫고 지나가지 않게 0.25칸씩 나눠서 움직임
     const steps = Math.max(1, Math.ceil(a.vel.length() * dt / 0.25));
     const step = a.vel.clone().multiplyScalar(dt / steps);
@@ -3629,6 +3666,7 @@ function updateArrows(dt) {
         scene.remove(a.mesh); arrows.splice(i, 1); done = true;
         if (a.kind === 'fireball') explode(a.pos.x, a.pos.y, a.pos.z, 1.3);
         else if (a.kind === 'pearl') pearlLand(a);
+        else if (a.kind === 'potion') splashPotion(a);
         break;
       }
       a.pos.copy(next);
@@ -3646,6 +3684,7 @@ function updateArrows(dt) {
         if (!player.dead && Math.abs(a.pos.x - p.x) < 0.4 && Math.abs(a.pos.z - p.z) < 0.4 && a.pos.y > p.y && a.pos.y < p.y + player.h) {
           scene.remove(a.mesh); arrows.splice(i, 1); done = true;
           if (a.kind === 'fireball') explode(a.pos.x, a.pos.y, a.pos.z, 1.3);
+          else if (a.kind === 'potion') splashPotion(a);
           else if (a.kind === 'smallfire') { damagePlayer(5, { x: a.vel.x / l * 0.4, z: a.vel.z / l * 0.4 }, '블레이즈의 불덩이에 맞았습니다'); player.burn = 3; }
           else damagePlayer(2 + (Math.random() * 3 | 0), { x: a.vel.x / l * 0.6, z: a.vel.z / l * 0.6 }, '스켈레톤의 화살에 맞았습니다');
         }
@@ -4221,6 +4260,8 @@ function sfxMob(type, kind, dist) {
   } else if (type === 'wolf') {
     if (kind === 'hurt') sfxTone(700 * p, 0.15, { type: 'triangle', vol: 0.12 * v, to: 500 * p });
     else { sfxTone(420 * p, 0.08, { type: 'square', vol: 0.08 * v, lp: 1200 }); sfxTone(380 * p, 0.1, { type: 'square', vol: 0.08 * v, lp: 1200, delay: 0.15 }); }
+  } else if (type === 'witch') {
+    sfxTone(300 * p, 0.2, { type: 'sawtooth', vol: 0.06 * v, to: 420 * p, lp: 1200 }); sfxTone(420 * p, 0.2, { type: 'sawtooth', vol: 0.05 * v, to: 280 * p, lp: 1200, delay: 0.18 });
   } else if (type === 'slime') {
     sfxNoise(0.15, 400, { type: 'lowpass', vol: 0.25 * v });
   } else if (type === 'spider') {
@@ -4491,6 +4532,10 @@ function effectsTick(dt) {
   if (player.fx.regen > 0 && !player.dead && player.hp < 20) {
     player.fxRegenT = (player.fxRegenT || 0) + dt;
     if (player.fxRegenT > 2) { player.fxRegenT = 0; player.hp = Math.min(20, player.hp + 1); updateHearts(); }
+  }
+  if (player.fx.poison > 0 && !player.dead) {
+    player.fxPoisonT = (player.fxPoisonT || 0) + dt;
+    if (player.fxPoisonT > 1.25) { player.fxPoisonT = 0; if (player.hp > 1) { player.invuln = 0; damagePlayer(1, null, '독에 당했습니다', true); } }
   }
   fxHudT -= dt;
   if (fxHudT <= 0) { fxHudT = 0.5; updateEffectsHud(); }
