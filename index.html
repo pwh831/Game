@@ -36,6 +36,8 @@
   #crosshair::before, #crosshair::after { content: ""; position: absolute; background: #fff; }
   #crosshair::before { left: 10px; top: 0; width: 2px; height: 22px; }
   #crosshair::after { top: 10px; left: 0; height: 2px; width: 22px; }
+  #effects { position: fixed; right: 10px; top: calc(10px + env(safe-area-inset-top, 0px)); font-size: 12px; line-height: 1.5; text-align: right;
+    text-shadow: 1px 1px 0 var(--shadow); pointer-events: none; font-variant-numeric: tabular-nums; white-space: pre; color: #e8d8ff; }
   #info { position: fixed; left: 10px; top: calc(10px + env(safe-area-inset-top, 0px)); font-size: 12px; line-height: 1.5;
     text-shadow: 1px 1px 0 var(--shadow); pointer-events: none; font-variant-numeric: tabular-nums; white-space: pre; }
   #toast { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); font-size: 15px; padding: 6px 12px; background: var(--panel);
@@ -153,7 +155,7 @@
 <div id="blockname"></div>
 <div id="sleep"></div>
 <div id="bossbar" hidden><b>엔더 드래곤</b><div class="bb-track"><i id="bb-fill"></i></div></div>
-<div id="hud"><div id="armorbar" hidden></div><div class="barrow"><div id="hearts"></div><div id="hunger"></div></div><div id="xpbar"><i id="xpfill"></i><span id="xplevel"></span></div><div id="hotbar"></div></div>
+<div id="effects"></div><div id="hud"><div id="armorbar" hidden></div><div class="barrow"><div id="hearts"></div><div id="hunger"></div></div><div id="xpbar"><i id="xpfill"></i><span id="xplevel"></span></div><div id="hotbar"></div></div>
 
 <div id="touch" hidden>
   <div id="stick" class="pad"><div id="knob"></div></div>
@@ -268,7 +270,7 @@ const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, WAT
   REDSTONE_ORE: 200, DUST_OFF: 201, DUST_ON: 202, LEVER_OFF: 203, LEVER_ON: 204, BUTTON_OFF: 205, BUTTON_ON: 206,
   PLATE_OFF: 207, PLATE_ON: 208, RS_TORCH: 209, LAMP_OFF: 210, LAMP_ON: 211, REDSTONE_BLOCK: 212, RS_TORCH_OFF: 213,
   // 피스톤: 방향 d(0~5, 면 순서 -x +x -y +y -z +z)마다 한 칸씩
-  PISTON: 214, STICKY: 220, PISTON_EXT: 226, STICKY_EXT: 232, PHEAD: 238, SHEAD: 244 };
+  PISTON: 214, STICKY: 220, PISTON_EXT: 226, STICKY_EXT: 232, PHEAD: 238, SHEAD: 244, BREW_STAND: 250 };
 const isBlk = id => id < 100 || id >= 200;
 const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7,
   WATER: 8, PLANKS: 9, COBBLE: 10, GLASS: 11, BRICK: 12, SNOW: 13, SNOW_SIDE: 14, BEDROCK: 15, TABLE_TOP: 16, TABLE_SIDE: 17,
@@ -281,7 +283,7 @@ const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5
   QUARTZ_ORE: 58, NETHER_BRICK: 59, PORTAL: 60, END_STONE: 61, EPF_TOP: 62, EPF_SIDE: 63, EPF_EYE_TOP: 64, END_PORTAL: 65,
   DRAGON_EGG: 66, QUARTZ_BLOCK: 67, ENCH_TOP: 68, ENCH_SIDE: 69,
   REDSTONE_ORE: 70, DUST_OFF: 71, DUST_ON: 72, LEVER: 73, RS_TORCH: 74, LAMP_OFF: 75, LAMP_ON: 76, REDSTONE_BLOCK: 77,
-  PISTON_TOP: 78, STICKY_TOP: 79, PISTON_SIDE: 80, PISTON_BOTTOM: 81, PISTON_INNER: 82 };
+  PISTON_TOP: 78, STICKY_TOP: 79, PISTON_SIDE: 80, PISTON_BOTTOM: 81, PISTON_INNER: 82, BREW: 83 };
 const NT = 88, TILE = 16;
 
 const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_SWORD: 104, WOOD_AXE: 105, STONE_AXE: 106,
@@ -295,7 +297,8 @@ const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_
   FLINT: 156, FLINT_STEEL: 157, BUCKET: 158, WATER_BUCKET: 159, LAVA_BUCKET: 160, QUARTZ: 161, BLAZE_ROD: 162,
   BLAZE_POWDER: 163, ENDER_PEARL: 164, EYE_OF_ENDER: 165,
   GHAST_TEAR: 166, NETHER_BRICK_ITEM: 167, REDSTONE: 168,
-  STRING: 169, FISHING_ROD: 170, RAW_FISH: 171, COOKED_FISH: 172 };
+  STRING: 169, FISHING_ROD: 170, RAW_FISH: 171, COOKED_FISH: 172,
+  BOTTLE: 173, WATER_BOTTLE: 174, P_HEAL: 175, P_REGEN: 176, P_SPEED: 177, P_FIRE: 178, P_NIGHT: 179, P_STRENGTH: 180, P_JUMP: 181 };
 // 갑옷: 132부터 [가죽, 철, 다이아몬드] × [투구, 흉갑, 레깅스, 부츠]
 const ARMOR_SET = [['leather', '가죽', 5, [1, 3, 2, 1]], ['iron', '철', 15, [2, 6, 5, 2]], ['diamond', '다이아몬드', 33, [3, 8, 6, 3]]];
 const ARMOR_PART = ['투구', '흉갑', '레깅스', '부츠'], ARMOR_BASE_DUR = [11, 16, 15, 13], ARMOR_COST = [5, 8, 7, 4];
@@ -414,6 +417,9 @@ for (let d = 0; d < 6; d++) {
       boxes: [cut(12 / 16, 1), rod()] };
   }
 }
+BLOCKS[B.BREW_STAND] = { name: '양조대', tex: one(T.BREW), solid: false, transparent: true, ao: false, hard: 0.5, tool: 'pickaxe', emit: 1,
+  boxes: [[1 / 16, 0, 1 / 16, 15 / 16, 2 / 16, 15 / 16], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16], [3 / 16, 2 / 16, 3 / 16, 6 / 16, 7 / 16, 6 / 16],
+    [10 / 16, 2 / 16, 3 / 16, 13 / 16, 7 / 16, 6 / 16], [6 / 16, 2 / 16, 10 / 16, 10 / 16, 7 / 16, 13 / 16]] };
 BLOCKS[B.ENCH_TABLE] = { name: '마법 부여대', tex: [T.ENCH_TOP, T.OBSIDIAN, T.ENCH_SIDE], hard: 5, tool: 'pickaxe', needsTool: true, tier: 1,
   transparent: true, ao: false, boxes: [[0, 0, 0, 1, 12 / 16, 1]], emit: 7, blast: true };
 
@@ -523,6 +529,20 @@ ITEMS[I.GHAST_TEAR] = { name: '가스트 눈물', stack: 64 };
 ITEMS[I.NETHER_BRICK_ITEM] = { name: '네더 벽돌 조각', stack: 64 };
 ITEMS[I.REDSTONE] = { name: '레드스톤 가루', stack: 64, placeAs: B.DUST_OFF };
 ITEMS[I.STRING] = { name: '실', stack: 64 };
+ITEMS[I.BOTTLE] = { name: '유리병', stack: 16, bottle: true };
+ITEMS[I.WATER_BOTTLE] = { name: '물병', stack: 1 };
+// 물약: fx 효과 이름, sec 지속 시간(0이면 즉시)
+const POTIONS = [
+  [I.P_HEAL, '치유의 물약', 'heal', 0, I.GOLD_INGOT, [240, 60, 80]],
+  [I.P_REGEN, '재생의 물약', 'regen', 45, I.GHAST_TEAR, [230, 110, 200]],
+  [I.P_SPEED, '신속의 물약', 'speed', 180, I.REDSTONE, [120, 190, 230]],
+  [I.P_FIRE, '화염 저항의 물약', 'fire', 180, I.BLAZE_ROD, [230, 150, 50]],
+  [I.P_NIGHT, '야간 투시의 물약', 'night', 180, B.GLOWSTONE, [40, 60, 200]],
+  [I.P_STRENGTH, '힘의 물약', 'strength', 180, I.QUARTZ, [150, 40, 40]],
+  [I.P_JUMP, '도약의 물약', 'jump', 180, I.ENDER_PEARL, [110, 230, 110]],
+];
+const FX_NAME = { regen: '재생', speed: '신속', fire: '화염 저항', night: '야간 투시', strength: '힘', jump: '도약' };
+for (const [id, name, fx, sec, , color] of POTIONS) ITEMS[id] = { name, stack: 1, potion: { fx, sec }, color };
 ITEMS[I.FISHING_ROD] = { name: '낚싯대', stack: 1, dur: 64, rod: true };
 ITEMS[I.RAW_FISH] = { name: '생선', stack: 64, food: 2, sat: 0.4 };
 ITEMS[I.COOKED_FISH] = { name: '익힌 생선', stack: 64, food: 5, sat: 6 };
@@ -577,6 +597,9 @@ RECIPES.push(
   { out: [B.PISTON + 3, 1], in: [[B.PLANKS, 3], [B.COBBLE, 4], [I.IRON_INGOT, 1], [I.REDSTONE, 1]], table: true },
   { out: [B.STICKY + 3, 1], in: [[B.PISTON + 3, 1], [I.FLESH, 1]] },
   { out: [I.FISHING_ROD, 1], in: [[I.STICK, 3], [I.STRING, 2]], table: true },
+  { out: [I.BOTTLE, 3], in: [[B.GLASS, 3]] },
+  { out: [B.BREW_STAND, 1], in: [[I.BLAZE_ROD, 1], [B.COBBLE, 3]], table: true },
+  ...POTIONS.map(([id, , , , ing]) => ({ out: [id, 1], in: [[I.WATER_BOTTLE, 1], [ing, 1]], brew: true })),
   { out: [B.WOOL, 1], in: [[I.STRING, 4]] },
   { out: [B.BUTTON_OFF, 1], in: [[B.STONE, 1]] },
   { out: [B.PLATE_OFF, 1], in: [[B.STONE, 2]] },
@@ -603,7 +626,7 @@ const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [B.BIRCH_LOG, 1.5], [I
 const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.CHEST, B.BED, B.WOOL, B.TNT, B.BEDROCK,
   B.SANDSTONE, B.BIRCH_LOG, B.STONE_BRICK, B.PLANK_SLAB, B.COBBLE_SLAB, B.STONE_SLAB, B.PLANK_STAIRS, B.COBBLE_STAIRS, B.FENCE, B.ICE, B.CACTUS, B.FLOWER_RED, B.FLOWER_YELLOW,
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
-  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH,
+  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
   I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD,
   B.PISTON + 3, B.STICKY + 3, B.REDSTONE_ORE, B.LEVER_OFF, B.BUTTON_OFF, B.PLATE_OFF, B.RS_TORCH, B.LAMP_OFF, B.REDSTONE_BLOCK, I.REDSTONE,
@@ -1583,6 +1606,7 @@ atlasCanvas.width = TILE * NT; atlasCanvas.height = TILE;
   tile(T.LAMP_ON, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15 || x === 7 || y === 7) ? nz([170, 110, 50], 10) : nz([255, 220, 140], 14));
   tile(T.REDSTONE_BLOCK, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15) ? nz([140, 10, 10], 10) : nz([200, 24, 20], 18));
   const frame = (x, y) => x === 0 || y === 0 || x === 15 || y === 15;
+  tile(T.BREW, (x, y) => (x + y) % 6 === 0 ? nz([240, 200, 80], 20) : nz([90, 84, 78], 18));
   tile(T.PISTON_TOP, (x, y) => frame(x, y) ? nz([100, 100, 100], 10) : plank(x, y));
   tile(T.STICKY_TOP, (x, y) => frame(x, y) ? nz([100, 100, 100], 10) : (x > 3 && x < 12 && y > 3 && y < 12) ? nz([110, 190, 90], 24) : plank(x, y));
   tile(T.PISTON_SIDE, (x, y) => (y < 4) ? plank(x, y) : (y === 4 || x === 0 || x === 15 || y === 15) ? nz([80, 80, 80], 8) : stone());
@@ -1740,6 +1764,18 @@ function drawItemIcon(g, id) {
       const d = Math.hypot(x - 7.5, y - 7.5);
       if (d < 6) px(x, y, eye && d < 2 ? [20, 40, 30] : eye && Math.abs(y - 7.5) < 2.2 ? [150, 220, 120] : (x < 7 && y < 7 ? [120, 230, 200] : [30, 110, 100]), 10);
     }
+  } else if (info.bottle || info.potion || id === I.WATER_BOTTLE) {
+    const liquid = info.color || (id === I.WATER_BOTTLE ? [60, 100, 230] : null);
+    for (let y = 2; y < 15; y++) for (let x = 3; x < 13; x++) {
+      const neck = y < 6, inX = neck ? (x >= 6 && x <= 9) : Math.hypot(x - 7.5, y - 10) < 4.8;
+      if (!inX) continue;
+      if (y === 2 && neck) { px(x, y, [150, 110, 70], 10); continue; }
+      const edge = neck ? (x === 6 || x === 9) : Math.hypot(x - 7.5, y - 10) > 3.9;
+      if (edge) px(x, y, [200, 220, 235], 8);
+      else if (liquid && y > 7) px(x, y, liquid, 16);
+      else g.fillStyle = 'rgba(210,230,245,.35)', g.fillRect(x * 2, y * 2, 2, 2);
+    }
+    if (liquid) px(6, 9, [255, 255, 255], 0);
   } else if (id === I.STRING) {
     for (let k = 0; k < 40; k++) { const t = k / 40; px(Math.round(3 + t * 10 + Math.sin(t * 9) * 1.5), Math.round(12 - t * 9 + Math.cos(t * 7) * 1.5), [238, 238, 238], 8); }
   } else if (id === I.FISHING_ROD) {
@@ -2281,6 +2317,7 @@ const blockAt = v => getBlock(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z))
 const player = {
   pos: new THREE.Vector3(0.5, 60, 0.5), vel: new THREE.Vector3(), hw: 0.3, h: 1.8, step: 0.6,
   yaw: 0, pitch: 0, onGround: false, flying: false, inWater: false, headInWater: false,
+  fx: {}, // 물약 효과: 이름 -> 남은 초
   hp: save && save.hp ? save.hp : 20, dead: false, invuln: 0, lastHurt: 0, regenT: 0, peakY: 0,
   food: save && save.food != null ? save.food : 20, sat: save && save.sat != null ? save.sat : 5, exh: 0, foodT: 0,
   level: save && save.level || 0, xpIn: save && save.xpIn || 0, enchSeed: save && save.enchSeed || 1,
@@ -2346,6 +2383,7 @@ function physics(dt) {
   const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
   const sprint = shift && !player.flying && (mode !== 'survival' || player.food > 6);
   let speed = player.flying ? 10 : (sprint ? 5.8 : 4.3);
+  if (player.fx.speed > 0 && !player.flying) speed *= 1.35;
   if (player.inWater && !player.flying) speed *= player.inLava ? 0.35 : 0.55;
   if (onSoul && !player.flying) speed *= 0.5;
   const tx = (-sy * fwd + cy * str) * speed;
@@ -2364,7 +2402,7 @@ function physics(dt) {
     if (jump) player.vel.y = Math.min(player.vel.y + (player.inLava ? 20 : 30) * dt, player.inLava ? 2 : 3.2);
     player.vel.y = Math.max(player.vel.y, player.inLava ? -1.5 : -3);
   } else {
-    if (jump && player.onGround) { player.vel.y = 8.6; exhaust(sprint ? 0.2 : 0.05); }
+    if (jump && player.onGround) { player.vel.y = player.fx.jump > 0 ? 10.8 : 8.6; exhaust(sprint ? 0.2 : 0.05); }
     player.vel.y -= 14 * dt; // 중력은 이동 전후로 반씩 (프레임 속도와 무관하게 점프 높이 1.32칸)
     player.vel.y = Math.max(player.vel.y, -45);
   }
@@ -2420,6 +2458,7 @@ function hungerTick(dt) {
 }
 // 용암에 닿으면 큰 피해를 입고 몇 초간 불이 붙음 (물에 들어가면 꺼짐)
 function fireTick(dt) {
+  if (player.fx.fire > 0) { player.burn = 0; document.getElementById('fire').style.opacity = 0; return; }
   if (player.inLava) { player.burn = 5; damagePlayer(4, null, '용암에 빠졌습니다'); }
   else if (player.burn > 0) {
     player.burn -= dt;
@@ -2438,6 +2477,7 @@ function cactusCheck() {
 function armorPoints() { return armor.reduce((a, s) => a + (s ? ITEMS[s.id].def : 0), 0); }
 function damagePlayer(n, dir, cause, ignoreArmor) {
   if (mode !== 'survival' || player.dead || player.invuln > 0 || n <= 0) return;
+  if (player.fx.fire > 0 && cause && /불|용암/.test(cause)) return;
   const pts = ignoreArmor ? 0 : armorPoints();
   if (pts) {
     // 방어 1점당 4% 감소 (최대 80%), 입고 있는 갑옷이 조금씩 닳음
@@ -2466,7 +2506,7 @@ function damagePlayer(n, dir, cause, ignoreArmor) {
   if (player.hp <= 0) die(cause);
 }
 function die(cause) {
-  player.dead = true;
+  player.dead = true; player.fx = {};
   returnEnchSlot();
   spawnOrbs(player.pos.x, player.pos.y + 0.5, player.pos.z, Math.min(100, player.level * 7));
   player.level = 0; player.xpIn = 0; updateXpBar();
@@ -2560,7 +2600,7 @@ function nearTable() {
   return false;
 }
 function canCraft(r, table) {
-  return (!r.table || table) && r.in.every(([id, n]) => countItem(id) >= n);
+  return (!r.table || table) && (!r.brew || invStation === 'brew') && r.in.every(([id, n]) => countItem(id) >= n);
 }
 function craft(r) {
   const table = invStation === 'table' || nearTable();
@@ -3893,6 +3933,26 @@ function renderTrades(box, title, note) {
     box.appendChild(btn);
   }
 }
+// ── 물약 효과 ──
+const effectsEl = document.getElementById('effects');
+function updateEffectsHud() {
+  const parts = [];
+  for (const k in player.fx) if (player.fx[k] > 0) { const t = Math.ceil(player.fx[k]); parts.push(`${FX_NAME[k]} ${t / 60 | 0}:${String(t % 60).padStart(2, '0')}`); }
+  effectsEl.textContent = parts.join('\n');
+}
+let fxHudT = 0;
+function effectsTick(dt) {
+  for (const k in player.fx) {
+    player.fx[k] -= dt;
+    if (player.fx[k] <= 0) delete player.fx[k];
+  }
+  if (player.fx.regen > 0 && !player.dead && player.hp < 20) {
+    player.fxRegenT = (player.fxRegenT || 0) + dt;
+    if (player.fxRegenT > 2) { player.fxRegenT = 0; player.hp = Math.min(20, player.hp + 1); updateHearts(); }
+  }
+  fxHudT -= dt;
+  if (fxHudT <= 0) { fxHudT = 0.5; updateEffectsHud(); }
+}
 // ── 레드스톤 ──
 // setBlock이 바뀐 자리를 rsQueue에 넣고, 매 프레임 rsTick이 모아서 회로 전체를 다시 계산함
 const rsQueue = [], rsTimers = new Map(), dustLevel = new Map(), rsDoors = new Set();
@@ -4278,7 +4338,7 @@ function useBucket(s, info) {
 function attack(m) {
   swingHand();
   const s = heldItem(), it = s ? ITEMS[s.id] : null;
-  const dmg = (it && it.dmg ? it.dmg : 1) + 1.25 * enchLv(s, 'sharpness');
+  const dmg = (it && it.dmg ? it.dmg : 1) + 1.25 * enchLv(s, 'sharpness') + (player.fx.strength > 0 ? 3 : 0);
   const dx = m.pos.x - player.pos.x, dz = m.pos.z - player.pos.z, l = Math.hypot(dx, dz) || 1;
   sfx.hit();
   hurtMob(m, dmg, { x: dx / l, z: dz / l });
@@ -4301,6 +4361,7 @@ function useItem() {
   if (hit && hit.id === B.TABLE && !sneaking) { openInventory('table'); return; }
   if (hit && hit.id === B.FURNACE && !sneaking) { openInventory('furnace'); return; }
   if (hit && hit.id === B.ENCH_TABLE && !sneaking) { openInventory('enchant'); return; }
+  if (hit && hit.id === B.BREW_STAND && !sneaking) { openInventory('brew'); return; }
   if (hit && hit.id === B.CHEST && !sneaking) { openChestAt(hit.x, hit.y, hit.z); return; }
   if (hit && hit.id === B.BED && !sneaking) { sleepAt(hit.x, hit.y, hit.z); return; }
   if (hit && BLOCKS[hit.id].door && !sneaking) { toggleDoor(hit.x, hit.y, hit.z); return; }
@@ -4367,6 +4428,26 @@ function useItem() {
     armor[info.armor] = s; inv[selected] = old;
     sfx.equip(); toast(info.name + '을(를) 입었습니다');
     refreshInvUI(); updateHearts(); scheduleSave();
+    return;
+  }
+  if (info.bottle) { // 물을 보고 우클릭하면 물병
+    const h = raycast(5, true);
+    if (h && h.id === B.WATER) {
+      sfxNoise(0.2, 800, { type: 'lowpass', vol: 0.25 });
+      if (--s.count <= 0) inv[selected] = { id: I.WATER_BOTTLE, count: 1 };
+      else if (addItem(I.WATER_BOTTLE, 1)) dropFromPlayer(I.WATER_BOTTLE, 1);
+      refreshInvUI(); scheduleSave();
+    }
+    return;
+  }
+  if (info.potion) {
+    const { fx, sec } = info.potion;
+    if (fx === 'heal') { player.hp = Math.min(20, player.hp + 8); updateHearts(); }
+    else player.fx[fx] = Math.max(player.fx[fx] || 0, sec);
+    sfx.eat(); sfxTone(600, 0.25, { vol: 0.08, to: 900 });
+    toast(info.name + '을(를) 마셨습니다');
+    if (mode === 'survival') inv[selected] = { id: I.BOTTLE, count: 1 };
+    refreshInvUI(); updateEffectsHud(); scheduleSave();
     return;
   }
   if (info.food) {
@@ -4944,10 +5025,12 @@ function renderRecipes() {
     }
     return;
   }
-  const table = invStation === 'table' || nearTable();
-  title.textContent = table ? '제작 (작업대)' : '제작';
-  note.textContent = table ? '작업대 옆이라 모든 조합을 쓸 수 있습니다.' : '도구를 만들려면 작업대를 설치하고 우클릭하세요.';
+  const table = invStation === 'table' || nearTable(), brew = invStation === 'brew';
+  title.textContent = brew ? '양조대' : table ? '제작 (작업대)' : '제작';
+  note.textContent = brew ? '유리병을 물에 대고 우클릭해 물병을 만든 뒤, 재료를 더해 물약을 만드세요.'
+    : table ? '작업대 옆이라 모든 조합을 쓸 수 있습니다.' : '도구를 만들려면 작업대를 설치하고 우클릭하세요.';
   for (const r of RECIPES) {
+    if (!!r.brew !== brew) continue;
     const ok = canCraft(r, table);
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'recipe'; btn.disabled = !ok;
@@ -5391,7 +5474,7 @@ function updateSky(dt) {
     scene.background = scene.fog.color;
     for (const m of [solidMat, waterMat]) {
       const u = m.uniforms;
-      u.skyDim.value = skyDimNow; u.ambient.value = ambientNow; u.fogColor.value.copy(scene.fog.color); u.fogNear.value = scene.fog.near; u.fogFar.value = scene.fog.far;
+      u.skyDim.value = skyDimNow; u.ambient.value = player.fx.night > 0 ? Math.max(ambientNow, 0.7) : ambientNow; u.fogColor.value.copy(scene.fog.color); u.fogNear.value = scene.fog.near; u.fogFar.value = scene.fog.far;
     }
     return;
   }
@@ -5435,7 +5518,7 @@ function updateSky(dt) {
   }
   for (const m of [solidMat, waterMat]) {
     const u = m.uniforms;
-    u.skyDim.value = skyDimNow; u.ambient.value = ambientNow; u.fogColor.value.copy(scene.fog.color); u.fogNear.value = scene.fog.near; u.fogFar.value = scene.fog.far;
+    u.skyDim.value = skyDimNow; u.ambient.value = player.fx.night > 0 ? Math.max(ambientNow, 0.7) : ambientNow; u.fogColor.value.copy(scene.fog.color); u.fogNear.value = scene.fog.near; u.fogFar.value = scene.fog.far;
   }
 }
 
@@ -5582,6 +5665,7 @@ function frame(now) {
     updateHand(dt);
     growCrops(dt);
     rsTick(dt);
+    effectsTick(dt);
     updateBoats(dt);
   } else { highlight.visible = false; crack.visible = false; }
   updateSky(active ? dt : 0);
