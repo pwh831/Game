@@ -27,6 +27,8 @@
   #water-tint { position: fixed; inset: 0; background: rgba(30, 70, 170, 0.35); pointer-events: none; }
   #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .35s;
     background: radial-gradient(ellipse at center, transparent 45%, rgba(200, 20, 20, .55)); }
+  #steer-ring { position: fixed; left: 40%; top: 40%; width: 20%; height: 20%; border: 1px dashed rgba(255,255,255,.28); border-radius: 50%; pointer-events: none; }
+  #steer-dot { position: fixed; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.75); box-shadow: 0 0 0 2px rgba(0,0,0,.35); pointer-events: none; }
   #crosshair { position: fixed; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; pointer-events: none; mix-blend-mode: difference; }
   #crosshair::before, #crosshair::after { content: ""; position: absolute; background: #fff; }
   #crosshair::before { left: 10px; top: 0; width: 2px; height: 22px; }
@@ -77,6 +79,7 @@
   .recipe small .miss { color: var(--bad); }
   .recipe:disabled { opacity: .45; cursor: default; }
   .recipe.smelt { grid-template-columns: 34px 1fr auto; cursor: default; }
+  .recipe.trade { grid-template-columns: 34px 1fr 34px; }
   .smelt-btns { display: flex; gap: 4px; }
   .smelt-btns button { padding: 5px 8px; font-size: 11px; }
   button:disabled { opacity: .45; cursor: default; }
@@ -130,6 +133,8 @@
 <div id="water-tint" hidden></div>
 <div id="hurt"></div>
 <div id="crosshair"></div>
+<div id="steer-ring" hidden></div>
+<div id="steer-dot" hidden></div>
 <div id="info"></div>
 <div id="toast"></div>
 <div id="blockname"></div>
@@ -179,18 +184,20 @@
       <kbd>우클릭 · R</kbd><span>설치 / 먹기 / 갑옷 입기 / 작업대·화로·상자 열기 / 침대에서 자기 / TNT 점화</span>
       <kbd>Shift + 우클릭</kbd><span>작업대·상자 등에 블록 붙여 놓기</span>
       <kbd>활 들고 우클릭 유지</kbd><span>당겼다가 놓으면 발사 (R 키도 가능)</span>
+      <kbd>우클릭 (문·주민·보트)</kbd><span>문 열고 닫기 / 주민과 거래 / 보트 타기 (Shift로 내림)</span>
       <kbd>E</kbd><span>인벤토리와 제작</span>
       <kbd>1-9 / Tab / [ ]</kbd><span>아이템 고르기 (마우스 잠금 중엔 휠도 가능)</span>
       <kbd>Q</kbd><span>들고 있는 아이템 버리기</span>
       <kbd>F</kbd><span>비행 (크리에이티브)</span>
       <kbd>Esc</kbd><span>일시정지</span>
     </div>
-    <p>아이패드 트랙패드: 두 손가락으로 쓸면 시점이 돌고 커서는 움직이지 않습니다. 우클릭은 두 손가락 클릭, Ctrl이나 ⌥를 누른 채 클릭, 또는 R 키 중 편한 것을 쓰세요.</p>
+    <p>아이패드 트랙패드: 커서를 화면 가운데에서 오른쪽에 두면 오른쪽으로 계속 돌고, 가운데로 가져오면 멈춥니다(가운데 원 안). 두 손가락으로 쓸어도 시점이 돕니다. 우클릭은 두 손가락 클릭, Ctrl이나 ⌥를 누른 채 클릭, 또는 R 키 중 편한 것을 쓰세요.</p>
     <div class="settings">
       <label for="set-look">마우스 잠금이 안 될 때 시점 조작</label>
       <select id="set-look">
-        <option value="scroll">두 손가락 스와이프</option>
+        <option value="stick">커서 조이스틱</option>
         <option value="cursor">커서 이동</option>
+        <option value="scroll">스와이프만</option>
       </select>
       <label for="set-sens">시점 감도 <output id="set-sens-val">1.0</output></label>
       <input id="set-sens" type="range" min="0.3" max="2.5" step="0.1">
@@ -236,14 +243,16 @@ const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, WAT
   TORCH: 23, TORCH_WX: 24, TORCH_EX: 25, TORCH_NZ: 26, TORCH_SZ: 27, // 벽 횃불: 붙은 방향(-x, +x, -z, +z)
   CHEST: 28, BED: 29, WOOL: 30, TNT: 31,
   FARMLAND: 32, WHEAT0: 33, WHEAT1: 34, WHEAT2: 35, WHEAT3: 36, TALL_GRASS: 37, FLOWER_RED: 38, FLOWER_YELLOW: 39,
-  CACTUS: 40, ICE: 41, SANDSTONE: 42, BIRCH_LOG: 43, STONE_BRICK: 44, PLANK_SLAB: 45, COBBLE_SLAB: 46, STONE_SLAB: 47 };
+  CACTUS: 40, ICE: 41, SANDSTONE: 42, BIRCH_LOG: 43, STONE_BRICK: 44, PLANK_SLAB: 45, COBBLE_SLAB: 46, STONE_SLAB: 47,
+  PLANK_STAIRS: 48, COBBLE_STAIRS: 52, FENCE: 56, DOOR: 57 }; // 계단은 방향 4개, 문은 방향 4 × 열림 2 × 위아래 2 = 16개
 const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7,
   WATER: 8, PLANKS: 9, COBBLE: 10, GLASS: 11, BRICK: 12, SNOW: 13, SNOW_SIDE: 14, BEDROCK: 15, TABLE_TOP: 16, TABLE_SIDE: 17,
   COAL_ORE: 18, IRON_ORE: 19, GOLD_ORE: 20, DIAMOND_ORE: 21, FURNACE_FRONT: 22, FURNACE_TOP: 23,
   IRON_BLOCK: 24, GOLD_BLOCK: 25, DIAMOND_BLOCK: 26, TORCH: 27,
   CHEST_TOP: 28, CHEST_FRONT: 29, BED_TOP: 30, BED_SIDE: 31, WOOL: 32, TNT_SIDE: 33, TNT_TOP: 34,
   FARMLAND_TOP: 35, WHEAT0: 36, WHEAT1: 37, WHEAT2: 38, WHEAT3: 39, TALL_GRASS: 40, FLOWER_RED: 41, FLOWER_YELLOW: 42,
-  CACTUS_SIDE: 43, CACTUS_TOP: 44, ICE: 45, SANDSTONE: 46, SANDSTONE_TOP: 47, BIRCH_SIDE: 48, STONE_BRICK: 49 };
+  CACTUS_SIDE: 43, CACTUS_TOP: 44, ICE: 45, SANDSTONE: 46, SANDSTONE_TOP: 47, BIRCH_SIDE: 48, STONE_BRICK: 49,
+  DOOR_BOTTOM: 50, DOOR_TOP: 51 };
 const NT = 64, TILE = 16;
 
 const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_SWORD: 104, WOOD_AXE: 105, STONE_AXE: 106,
@@ -252,7 +261,8 @@ const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_
   IRON_PICK: 117, IRON_SWORD: 118, IRON_AXE: 119, IRON_SHOVEL: 120,
   DIA_PICK: 121, DIA_SWORD: 122, DIA_AXE: 123, DIA_SHOVEL: 124,
   LEATHER: 125, BEEF: 126, STEAK: 127, MUTTON: 128, COOKED_MUTTON: 129, BONE: 130, GUNPOWDER: 131,
-  SEEDS: 144, WHEAT: 145, BREAD: 146, BOW: 147, ARROW: 148, WOOD_HOE: 149, STONE_HOE: 150, IRON_HOE: 151, DIA_HOE: 152 };
+  SEEDS: 144, WHEAT: 145, BREAD: 146, BOW: 147, ARROW: 148, WOOD_HOE: 149, STONE_HOE: 150, IRON_HOE: 151, DIA_HOE: 152,
+  DOOR: 153, BOAT: 154, EMERALD: 155 };
 // 갑옷: 132부터 [가죽, 철, 다이아몬드] × [투구, 흉갑, 레깅스, 부츠]
 const ARMOR_SET = [['leather', '가죽', 5, [1, 3, 2, 1]], ['iron', '철', 15, [2, 6, 5, 2]], ['diamond', '다이아몬드', 33, [3, 8, 6, 3]]];
 const ARMOR_PART = ['투구', '흉갑', '레깅스', '부츠'], ARMOR_BASE_DUR = [11, 16, 15, 13], ARMOR_COST = [5, 8, 7, 4];
@@ -309,7 +319,36 @@ const slab = (name, tile, extra) => ({ name, tex: [tile, tile, tile], height: 0.
 BLOCKS[B.PLANK_SLAB] = slab('판자 반블록', T.PLANKS, { hard: 2, tool: 'axe', snd: 'wood' });
 BLOCKS[B.COBBLE_SLAB] = slab('조약돌 반블록', T.COBBLE, { hard: 2, tool: 'pickaxe', needsTool: true, tier: 1 });
 BLOCKS[B.STONE_SLAB] = slab('돌 반블록', T.STONE, { hard: 2, tool: 'pickaxe', needsTool: true, tier: 1 });
+// 모양이 있는 블록: boxes는 [x0, y0, z0, x1, y1, z1] (칸 안의 0~1 좌표) 목록
+// 방향 f: 0 북(-z), 1 동(+x), 2 남(+z), 3 서(-x) — 플레이어가 바라보던 방향
+const STAIR_TOP = [[0, 0.5, 0, 1, 1, 0.5], [0.5, 0.5, 0, 1, 1, 1], [0, 0.5, 0.5, 1, 1, 1], [0, 0.5, 0, 0.5, 1, 1]];
+[[B.PLANK_STAIRS, '판자 계단', T.PLANKS, { hard: 2, tool: 'axe', snd: 'wood' }],
+ [B.COBBLE_STAIRS, '조약돌 계단', T.COBBLE, { hard: 2, tool: 'pickaxe', needsTool: true, tier: 1 }]].forEach(([base, name, tile, extra]) => {
+  for (let f = 0; f < 4; f++) BLOCKS[base + f] = { name, tex: [tile, tile, tile], transparent: true, ao: false,
+    boxes: [[0, 0, 0, 1, 0.5, 1], STAIR_TOP[f]], facing: f, family: base, noItem: f > 0, drop: base, ...extra };
+});
+const D = 3 / 16, DOOR_CLOSED = [[0, 0, 1 - D, 1, 1, 1], [0, 0, 0, D, 1, 1], [0, 0, 0, 1, 1, D], [1 - D, 0, 0, 1, 1, 1]];
+for (let f = 0; f < 4; f++) for (let open = 0; open < 2; open++) for (let top = 0; top < 2; top++) {
+  BLOCKS[B.DOOR + f * 4 + open * 2 + top] = { name: '나무 문', tex: Array(3).fill(top ? T.DOOR_TOP : T.DOOR_BOTTOM), transparent: true, ao: false,
+    boxes: [DOOR_CLOSED[open ? (f + 1) % 4 : f]], door: { f, open, top }, noItem: true, drop: top ? 0 : I.DOOR, hard: 1.5, tool: 'axe', snd: 'wood' };
+}
+// 울타리: 옆에 울타리나 꽉 찬 블록이 있으면 그쪽으로 난간이 이어짐. 충돌 높이는 1.5칸 (뛰어넘을 수 없음)
+BLOCKS[B.FENCE] = { name: '울타리', tex: [T.PLANKS, T.PLANKS, T.PLANKS], transparent: true, ao: false, hard: 2, tool: 'axe', snd: 'wood',
+  shape: (x, y, z, collide) => {
+    const lo = 6 / 16, hi = 10 / 16, top = collide ? 1.5 : 1, out = [[lo, 0, lo, hi, top, hi]];
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const n = getBlock(x + dx, y, z + dz);
+      if (n !== B.FENCE && !LOP[n]) continue;
+      const x0 = dx > 0 ? hi : dx < 0 ? 0 : 7 / 16, x1 = dx > 0 ? 1 : dx < 0 ? lo : 9 / 16;
+      const z0 = dz > 0 ? hi : dz < 0 ? 0 : 7 / 16, z1 = dz > 0 ? 1 : dz < 0 ? lo : 9 / 16;
+      if (collide) out.push([dx ? x0 : lo, 0, dz ? z0 : lo, dx ? x1 : hi, 1.5, dz ? z1 : hi]);
+      else out.push([x0, 6 / 16, z0, x1, 9 / 16, z1], [x0, 12 / 16, z0, x1, 15 / 16, z1]);
+    }
+    return out;
+  } };
 for (const b of BLOCKS) {
+  if (!b) continue;
+  if (b.height && !b.boxes) b.boxes = [[0, 0, 0, 1, b.height, 1]];
   if (b.solid === undefined) b.solid = true;
   if (b.transparent === undefined) b.transparent = false;
   if (b.ao === undefined) b.ao = !b.transparent;
@@ -320,8 +359,6 @@ BLOCKS.forEach((b, i) => { SOLID[i] = b.solid ? 1 : 0; TRANSP[i] = b.transparent
 const LOP = new Uint8Array(BLOCKS.length), ATTEN = new Uint8Array(BLOCKS.length), EMIT = new Uint8Array(BLOCKS.length);
 BLOCKS.forEach((b, i) => { LOP[i] = b.solid && !b.transparent ? 1 : 0; EMIT[i] = b.emit || 0; });
 ATTEN[B.LEAVES] = 1; ATTEN[B.WATER] = 2;
-const BH = new Float32Array(BLOCKS.length).fill(1); // 블록 높이 (침대는 낮음)
-BLOCKS.forEach((b, i) => { if (b.height) BH[i] = b.height; });
 
 // 광맥: [블록, 청크당 개수, 최저 높이, 최고 높이, 광맥 크기]
 const ORE_GEN = [[B.COAL_ORE, 16, 4, 70, 9], [B.IRON_ORE, 9, 4, 48, 6], [B.GOLD_ORE, 2.2, 3, 28, 6], [B.DIAMOND_ORE, 1.1, 2, 15, 5]];
@@ -366,6 +403,9 @@ ITEMS[I.WHEAT] = { name: '밀', stack: 64 };
 ITEMS[I.BREAD] = { name: '빵', stack: 64, food: 5, sat: 6 };
 ITEMS[I.BOW] = { name: '활', stack: 1, dur: 384, bow: true };
 ITEMS[I.ARROW] = { name: '화살', stack: 64 };
+ITEMS[I.DOOR] = { name: '나무 문', stack: 64, door: true };
+ITEMS[I.BOAT] = { name: '보트', stack: 1, boat: true };
+ITEMS[I.EMERALD] = { name: '에메랄드', stack: 64 };
 [[I.WOOD_HOE, '나무', 'wood'], [I.STONE_HOE, '돌', 'stone'], [I.IRON_HOE, '철', 'iron'], [I.DIA_HOE, '다이아몬드', 'diamond']]
   .forEach(([id, label, mat]) => { ITEMS[id] = toolDef(label + ' 괭이', 'hoe', mat); });
 ITEMS[I.BONE] = { name: '뼈', stack: 64 };
@@ -402,6 +442,11 @@ RECIPES.push(
   { out: [B.STONE_BRICK, 4], in: [[B.STONE, 4]], table: true },
   { out: [B.SANDSTONE, 1], in: [[B.SAND, 4]], table: true },
   { out: [B.PLANK_SLAB, 6], in: [[B.PLANKS, 3]], table: true },
+  { out: [B.PLANK_STAIRS, 4], in: [[B.PLANKS, 6]], table: true },
+  { out: [B.COBBLE_STAIRS, 4], in: [[B.COBBLE, 6]], table: true },
+  { out: [B.FENCE, 3], in: [[B.PLANKS, 4], [I.STICK, 2]], table: true },
+  { out: [I.DOOR, 3], in: [[B.PLANKS, 6]], table: true },
+  { out: [I.BOAT, 1], in: [[B.PLANKS, 5]], table: true },
   { out: [B.COBBLE_SLAB, 6], in: [[B.COBBLE, 3]], table: true },
   { out: [B.STONE_SLAB, 6], in: [[B.STONE, 3]], table: true },
   { out: [B.IRON_BLOCK, 1], in: [[I.IRON_INGOT, 9]], table: true },
@@ -418,11 +463,11 @@ const SMELT = [[B.IRON_ORE, I.IRON_INGOT], [B.GOLD_ORE, I.GOLD_INGOT], [B.SAND, 
   [I.PORK, I.COOKED_PORK], [B.LOG, I.COAL]];
 const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [B.BIRCH_LOG, 1.5], [I.STICK, 0.5]];
 const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.CHEST, B.BED, B.WOOL, B.TNT, B.BEDROCK,
-  B.SANDSTONE, B.BIRCH_LOG, B.STONE_BRICK, B.PLANK_SLAB, B.COBBLE_SLAB, B.STONE_SLAB, B.ICE, B.CACTUS, B.FLOWER_RED, B.FLOWER_YELLOW,
+  B.SANDSTONE, B.BIRCH_LOG, B.STONE_BRICK, B.PLANK_SLAB, B.COBBLE_SLAB, B.STONE_SLAB, B.PLANK_STAIRS, B.COBBLE_STAIRS, B.FENCE, B.ICE, B.CACTUS, B.FLOWER_RED, B.FLOWER_YELLOW,
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
   I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH,
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
-  I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE];
+  I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD];
 const CREATIVE_HOTBAR = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.PLANKS, B.LOG, B.GLASS, B.BRICK, B.TORCH];
 
 // =====================================================================
@@ -448,16 +493,18 @@ if (save && save.inv) save.inv.forEach((s, i) => { if (s && ITEMS[s[0]]) inv[i] 
 else if (mode === 'creative') CREATIVE_HOTBAR.forEach((id, i) => inv[i] = { id, count: 64 });
 
 const SETTINGS_KEY = 'blockcraft-settings';
-const settings = { look: 'scroll', sens: 1, invert: false, volume: 0.7 };
+const settings = { look: 'stick', sens: 1, invert: false, volume: 0.7, v: 2 };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch (e) { /* 기본값 사용 */ }
 function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* 무시 */ } }
+if (settings.v !== 2) { settings.look = 'stick'; settings.v = 2; saveSettings(); } // 이전 버전 설정은 새 기본값(조이스틱)으로
 
 let saveTimer = null;
 function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(writeSave, 800); }
 function writeSave() {
   const obj = { v: 2, seed: SEED, mode, time: worldTime, hp: player.hp, food: player.food, sat: player.sat, fuel, edits: {},
     player: [player.pos.x, player.pos.y, player.pos.z, player.yaw, player.pitch, player.flying],
-    inv: inv.map(ser), armor: armor.map(ser), spawn: spawnPoint, chests: {} };
+    inv: inv.map(ser), armor: armor.map(ser), spawn: spawnPoint, chests: {},
+    boats: boats.map(b => [+b.pos.x.toFixed(2), +b.pos.y.toFixed(2), +b.pos.z.toFixed(2), +b.yaw.toFixed(2)]) };
   for (const [k, arr] of chests) obj.chests[k] = arr.map(ser);
   for (const [k, m] of edits) if (m.size) obj.edits[k] = [...m];
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(obj)); } catch (e) { /* 저장할 수 없는 환경 */ }
@@ -560,6 +607,122 @@ function biomeAt(x, z) {
 }
 const treeAt = (x, z, bio) => TREE_CHANCE[bio] > 0 && hash2(x, z, 11) <= TREE_CHANCE[bio];
 
+// =====================================================================
+// 마을: 288칸 격자마다 한 곳쯤 (평원·사막). 우물을 가운데 두고 집과 밭을 빙 둘러 배치
+// 건물은 월드 좌표 블록 목록으로 만들어 두고, 각 청크가 자기 범위에 든 것만 가져감
+// =====================================================================
+const VCELL = 288;
+const villageCache = new Map();
+function villageInCell(gx, gz) {
+  const k = gx + ',' + gz;
+  if (villageCache.has(k)) return villageCache.get(k);
+  let v = null;
+  if (hash2(gx, gz, 101) < 0.6) {
+    const x = gx * VCELL + 48 + Math.floor(hash2(gx, gz, 102) * (VCELL - 96));
+    const z = gz * VCELL + 48 + Math.floor(hash2(gx, gz, 103) * (VCELL - 96));
+    const bio = biomeAt(x, z), y = terrainHeight(x, z);
+    if ((bio === BIO.PLAINS || bio === BIO.DESERT) && y > SEA + 1 && y < 56) v = { x, z, y, bio, key: k, blocks: null, chests: [] };
+  }
+  villageCache.set(k, v);
+  return v;
+}
+function villagesNear(x0, z0, x1, z1, margin) {
+  const out = [];
+  for (let gx = Math.floor((x0 - margin) / VCELL); gx <= Math.floor((x1 + margin) / VCELL); gx++)
+    for (let gz = Math.floor((z0 - margin) / VCELL); gz <= Math.floor((z1 + margin) / VCELL); gz++) {
+      const v = villageInCell(gx, gz);
+      if (v) out.push(v);
+    }
+  return out;
+}
+function buildVillage(v) {
+  if (v.blocks) return v.blocks;
+  const list = [], rng = mulberry32(Math.imul(v.x, 31337) ^ Math.imul(v.z, 7919) ^ SEED);
+  const desert = v.bio === BIO.DESERT;
+  const WALL = desert ? B.SANDSTONE : B.PLANKS, CORNER = desert ? B.SANDSTONE : B.LOG, FLOOR = desert ? B.SANDSTONE : B.COBBLE;
+  const put = (x, y, z, id) => list.push([x, y, z, id]);
+  // 발판: 땅이 낮으면 조약돌로 채우고, 높으면 위를 파냄
+  const ground = (x0, z0, x1, z1, gy, clearTo) => {
+    for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) {
+      const th = terrainHeight(x, z);
+      for (let y = Math.min(th, gy - 1); y < gy; y++) put(x, y, z, desert ? B.SANDSTONE : B.COBBLE);
+      for (let y = gy + 1; y <= Math.max(clearTo, th + 2); y++) put(x, y, z, B.AIR);
+    }
+  };
+  // 우물
+  const gy = v.y;
+  ground(v.x - 2, v.z - 2, v.x + 1, v.z + 1, gy, gy + 4);
+  for (let dx = -2; dx <= 1; dx++) for (let dz = -2; dz <= 1; dz++) {
+    const edge = dx === -2 || dx === 1 || dz === -2 || dz === 1;
+    put(v.x + dx, gy - 1, v.z + dz, B.COBBLE);
+    put(v.x + dx, gy, v.z + dz, edge ? B.COBBLE : B.WATER);
+    put(v.x + dx, gy + 1, v.z + dz, edge ? B.COBBLE_SLAB : B.AIR);
+    if ((dx === -2 || dx === 1) && (dz === -2 || dz === 1)) { put(v.x + dx, gy + 2, v.z + dz, B.FENCE); put(v.x + dx, gy + 3, v.z + dz, B.FENCE); }
+    put(v.x + dx, gy + 4, v.z + dz, B.COBBLE_SLAB);
+  }
+  // 집과 밭
+  const n = 5 + (rng() * 3 | 0), start = rng() * Math.PI * 2;
+  for (let i = 0; i < n; i++) {
+    const a = start + i / n * Math.PI * 2 + (rng() - 0.5) * 0.3, dist = 14 + rng() * 5;
+    const cx = Math.round(v.x + Math.cos(a) * dist), cz = Math.round(v.z + Math.sin(a) * dist);
+    const cy = terrainHeight(cx, cz);
+    if (cy <= SEA) continue;
+    if (i % 3 === 2 && !desert) {
+      // 밭 7×9: 가운데 줄은 물
+      ground(cx - 3, cz - 4, cx + 3, cz + 4, cy, cy + 3);
+      for (let dx = -3; dx <= 3; dx++) for (let dz = -4; dz <= 4; dz++) {
+        const edge = Math.abs(dx) === 3 || Math.abs(dz) === 4;
+        put(cx + dx, cy, cz + dz, edge ? B.LOG : dx === 0 ? B.WATER : B.FARMLAND);
+        if (!edge && dx !== 0) put(cx + dx, cy + 1, cz + dz, B.WHEAT1 + (rng() * 3 | 0));
+      }
+      continue;
+    }
+    // 집: 너비 5~7, 깊이 5, 문은 우물 쪽
+    const hw = rng() < 0.5 ? 2 : 3, hd = 2;
+    ground(cx - hw, cz - hd, cx + hw, cz + hd, cy, cy + 6);
+    const ddx = v.x - cx, ddz = v.z - cz;
+    const doorSide = Math.abs(ddx) > Math.abs(ddz) ? (ddx > 0 ? 1 : 3) : (ddz > 0 ? 2 : 0); // 문이 있는 벽 방향
+    const inward = (doorSide + 2) % 4; // 밖에서 안으로 들어가는 방향 = 문 방향
+    for (let dx = -hw; dx <= hw; dx++) for (let dz = -hd; dz <= hd; dz++) {
+      const x = cx + dx, z = cz + dz, ex = Math.abs(dx) === hw, ez = Math.abs(dz) === hd;
+      put(x, cy, z, FLOOR);
+      for (let y = cy + 1; y <= cy + 3; y++) {
+        if (ex || ez) {
+          const window = y === cy + 2 && ((ex && dz === 0) || (ez && dx === 0));
+          put(x, y, z, ex && ez ? CORNER : window ? B.GLASS : WALL);
+        } else put(x, y, z, B.AIR);
+      }
+      put(x, cy + 4, z, (ex || ez) ? (desert ? B.SANDSTONE : B.PLANK_SLAB) : (desert ? B.SANDSTONE : B.PLANKS));
+    }
+    const [ox, oz] = [[0, -hd], [hw, 0], [0, hd], [-hw, 0]][doorSide];
+    put(cx + ox, cy + 1, cz + oz, B.DOOR + inward * 4);
+    put(cx + ox, cy + 2, cz + oz, B.DOOR + inward * 4 + 1);
+    const [sx, sz] = [[0, -1], [1, 0], [0, 1], [-1, 0]][doorSide];
+    put(cx + ox + sx, cy, cz + oz + sz, B.COBBLE); // 문 앞 디딤돌
+    put(cx + ox + sx, cy + 1, cz + oz + sz, B.AIR); put(cx + ox + sx, cy + 2, cz + oz + sz, B.AIR);
+    // 방 안: 횃불, 침대, 첫 집에는 상자
+    const bx = cx - Math.sign(ox) * (hw - 1), bz = cz - Math.sign(oz) * (hd - 1);
+    put(cx + (ox ? -Math.sign(ox) : hw - 1), cy + 1, cz + (oz ? -Math.sign(oz) : hd - 1), B.TORCH);
+    put(bx, cy + 1, bz + (oz ? 0 : 1) * (hd > 1 ? -1 : 0), B.BED);
+    if (i === 0) {
+      const chx = cx + (ox ? -Math.sign(ox) * (hw - 1) : -(hw - 1)), chz = cz + (oz ? -Math.sign(oz) * (hd - 1) : hd - 1);
+      put(chx, cy + 1, chz, B.CHEST);
+      v.chests.push([chx, cy + 1, chz]);
+    }
+  }
+  v.blocks = list;
+  return list;
+}
+function villageLoot(x, y, z) {
+  const r = mulberry32(Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791) ^ SEED);
+  const arr = new Array(27).fill(null);
+  const add = (id, lo, hi) => { const n = lo + (r() * (hi - lo + 1) | 0); if (n) arr[r() * 27 | 0] = { id, count: n, dur: ITEMS[id].dur }; };
+  add(I.BREAD, 1, 5); add(I.IRON_INGOT, 0, 4); add(I.EMERALD, 1, 3); add(I.APPLE, 0, 3); add(I.SEEDS, 2, 6);
+  if (r() < 0.25) add(I.DIAMOND, 1, 2);
+  if (r() < 0.3) add(I.IRON_PICK, 1, 1);
+  return arr;
+}
+
 const chunks = new Map();
 const key = (cx, cz) => cx + ',' + cz;
 const vidx = (x, y, z) => (y * CS + z) * CS + x;
@@ -661,10 +824,28 @@ function generateChunk(cx, cz) {
     }
   }
 
+  // 마을 건물
+  for (const v of villagesNear(x0, z0, x0 + CS - 1, z0 + CS - 1, 40)) {
+    for (const [bx, by, bz, id] of buildVillage(v)) {
+      const lx = bx - x0, lz = bz - z0;
+      if (lx >= 0 && lx < CS && lz >= 0 && lz < CS && by > 0 && by < CH) data[vidx(lx, by, lz)] = id;
+    }
+  }
+
   const e = edits.get(key(cx, cz));
   if (e) for (const [i, id] of e) {
     data[i] = id;
-    if (BLOCKS[id] && BLOCKS[id].crop !== undefined && BLOCKS[id].crop < 3) {
+  }
+
+  // 마을 상자는 처음 만들어질 때 한 번만 내용물을 채움
+  for (const v of villagesNear(x0, z0, x0 + CS - 1, z0 + CS - 1, 40)) for (const [hx, hy, hz] of v.chests) {
+    const lx = hx - x0, lz = hz - z0;
+    if (lx < 0 || lx >= CS || lz < 0 || lz >= CS || data[vidx(lx, hy, lz)] !== B.CHEST) continue;
+    if (!chests.has(ckey(hx, hy, hz))) chests.set(ckey(hx, hy, hz), villageLoot(hx, hy, hz));
+  }
+  for (let i = 0; i < data.length; i++) {
+    const id = data[i];
+    if (id >= B.WHEAT0 && id <= B.WHEAT2) {
       const lx = i % CS, lz = (i / CS | 0) % CS, ly = i / (CS * CS) | 0;
       crops.set(ckey(x0 + lx, ly, z0 + lz), [x0 + lx, ly, z0 + lz]);
     }
@@ -992,6 +1173,9 @@ atlasCanvas.width = TILE * NT; atlasCanvas.height = TILE;
     if (y % 8 === 7 || ((x + off) % 8) === 7) return nz([80, 80, 80], 8);
     return nz([128, 128, 128], 16);
   });
+  const doorWood = (x, y) => (x === 0 || x === 15 || y === 0 || y === 15) ? nz([110, 78, 40], 10) : (x % 5 === 2 ? nz([130, 94, 50], 10) : nz([160, 118, 66], 14));
+  tile(T.DOOR_BOTTOM, (x, y) => (y === 7 || y === 8) && x > 2 && x < 13 ? nz([110, 78, 40], 10) : doorWood(x, y));
+  tile(T.DOOR_TOP, (x, y) => (x >= 3 && x <= 12 && y >= 3 && y <= 11 && x !== 7 && x !== 8 && y !== 7) ? [0, 0, 0, 0] : doorWood(x, y));
   tile(T.CHEST_TOP, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15) ? nz([90, 60, 30], 10) : nz([168, 118, 58], 16));
   tile(T.CHEST_FRONT, (x, y) => {
     if (x === 0 || y === 0 || x === 15 || y === 15 || y === 6) return nz([90, 60, 30], 10);
@@ -1104,6 +1288,22 @@ function drawItemIcon(g, id) {
       ['', '', '', '', '', '', '', '...###....###', '...###....###', '...###....###', '..####....####', '..####....####'],
     ][info.armor];
     P.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '#') px(x, y + 2, (x + y) % 5 === 0 ? c.map(v => v - 40) : c, 14); }));
+  } else if (id === I.DOOR) {
+    for (let y = 1; y < 15; y++) for (let x = 4; x < 12; x++) {
+      const win = y >= 3 && y <= 6 && x >= 6 && x <= 9;
+      px(x, y, win ? [150, 190, 220] : (x === 4 || x === 11 || y === 1 || y === 14) ? [110, 78, 40] : [160, 118, 66], 12);
+    }
+    px(10, 9, [60, 60, 60]);
+  } else if (id === I.BOAT) {
+    for (let y = 7; y < 12; y++) for (let x = 1; x < 15; x++) {
+      const inset = (y - 7) * 0.8;
+      if (x >= 1 + inset && x <= 14 - inset) px(x, y, y === 7 ? [110, 78, 40] : [160, 118, 66], 14);
+    }
+  } else if (id === I.EMERALD) {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const d = Math.abs(x - 7.5) / 5 + Math.abs(y - 8) / 7;
+      if (d < 1) px(x, y, d > 0.8 ? [20, 110, 50] : (x < 8 && y < 8 ? [140, 250, 170] : [50, 200, 100]), 12);
+    }
   } else if (id === I.BOW) {
     for (let a = 0; a <= 16; a++) {
       const t = Math.PI + a / 16 * Math.PI / 2, x = Math.round(13 + 10 * Math.cos(t)), y = Math.round(13 + 10 * Math.sin(t));
@@ -1350,7 +1550,7 @@ function buildMesh(c) {
     if (id === B.AIR) continue;
     const blk = BLOCKS[id];
     if (blk.torch) { emitTorch(S, x, y, z, blk, padSky[p]); continue; }
-    if (blk.height) { emitSlab(S, x, y, z, blk, p); continue; }
+    if (blk.boxes || blk.shape) { emitBoxes(S, x, y, z, blk, p, shapeOf(id, cx * CS + x, y, cz * CS + z, false)); continue; }
     if (blk.cross) { emitCross(S, x, y, z, blk.tex[0], p); continue; }
     const out = id === B.WATER ? W : S;
     for (let fi = 0; fi < 6; fi++) {
@@ -1428,21 +1628,34 @@ function emitCross(out, x, y, z, tile, p) {
     else out.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
   }
 }
-function emitSlab(out, x, y, z, blk, p) {
-  const h = blk.height, e = 0.0008, ls = padSky[p] / 15, lb = padBlk[p] / 15;
-  for (let fi = 0; fi < 6; fi++) {
-    const f = FACES[fi];
-    if (fi === 2 && LOP[pad[p + f.nOff]]) continue; // 바닥면은 아래가 막혀 있으면 생략
-    if (fi !== 2 && fi !== 3 && LOP[pad[p + f.nOff]]) continue;
-    const tile = blk.tex[f.side], base = out.pos.length / 3;
-    for (const cr of f.corners) {
-      out.pos.push(x + cr[0], y + cr[1] * h, z + cr[2]);
-      const v = f.side === 2 ? cr[4] * h : cr[4];
-      out.uv.push((tile + e + cr[3] * (1 - 2 * e)) / NT, e + v * (1 - 2 * e));
-      out.sh.push(f.shade);
-      out.light.push(ls, lb);
+// 각 면에서 u, v가 어느 축을 따라 가는지 (텍스처를 상자 크기에 맞게 잘라 붙이기 위해)
+for (const f of FACES) {
+  const axisOf = (c0, c1) => [0, 1, 2].find(a => c0[a] !== c1[a]);
+  const u0 = f.corners.find(c => c[3] === 0), u1 = f.corners.find(c => c[3] === 1 && c[4] === u0[4]);
+  const v0 = f.corners.find(c => c[4] === 0), v1 = f.corners.find(c => c[4] === 1 && c[3] === v0[3]);
+  f.ua = axisOf(u0, u1); f.uflip = u1[f.ua] < u0[f.ua];
+  f.va = axisOf(v0, v1); f.vflip = v1[f.va] < v0[f.va];
+  f.na = f.dir.findIndex(v => v !== 0); f.npos = f.dir[f.na] > 0;
+}
+function emitBoxes(out, x, y, z, blk, p, boxes) {
+  const e = 0.0008, ls = padSky[p] / 15, lb = padBlk[p] / 15;
+  for (const bx of boxes) {
+    const mn = [bx[0], bx[1], bx[2]], mx = [bx[3], bx[4], bx[5]];
+    for (let fi = 0; fi < 6; fi++) {
+      const f = FACES[fi];
+      const facePos = f.npos ? mx[f.na] : mn[f.na];
+      if ((f.npos ? facePos >= 1 : facePos <= 0) && LOP[pad[p + f.nOff]]) continue; // 칸 경계면이 막혀 있으면 생략
+      const tile = blk.tex[f.side], base = out.pos.length / 3;
+      for (const cr of f.corners) {
+        const q = [cr[0] ? mx[0] : mn[0], cr[1] ? mx[1] : mn[1], cr[2] ? mx[2] : mn[2]];
+        out.pos.push(x + q[0], y + q[1], z + q[2]);
+        const u = f.uflip ? 1 - q[f.ua] : q[f.ua], v = f.vflip ? 1 - q[f.va] : q[f.va];
+        out.uv.push((tile + e + u * (1 - 2 * e)) / NT, e + v * (1 - 2 * e));
+        out.sh.push(f.shade);
+        out.light.push(ls, lb);
+      }
+      out.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
     }
-    out.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
   }
 }
 function disposeMeshes(c) {
@@ -1482,32 +1695,54 @@ function updateChunks(budgetMs) {
 // =====================================================================
 // 충돌과 이동 (플레이어, 몹, 떨어진 아이템 공용)
 // =====================================================================
-// 상자와 겹치는 블록 중 가장 높은 윗면 (없으면 -1). 침대처럼 낮은 블록은 윗면 위에 있으면 안 겹침
-function boxTop(px, py, pz, hw, h) {
+// 블록의 충돌/그리기 상자 (칸 안 좌표). 꽉 찬 블록은 FULL
+const FULL_BOX = [[0, 0, 0, 1, 1, 1]];
+function shapeOf(id, x, y, z, collide) {
+  const b = BLOCKS[id];
+  return b.shape ? b.shape(x, y, z, collide) : b.boxes || FULL_BOX;
+}
+// 엔티티 상자와 겹치는 블록 상자들 (월드 좌표)
+function overlapBoxes(px, py, pz, hw, h) {
   const x0 = Math.floor(px - hw), x1 = Math.floor(px + hw);
-  const y0 = Math.floor(py), y1 = Math.floor(py + h);
+  const y0 = Math.floor(py) - 1, y1 = Math.floor(py + h); // 아래 칸은 울타리처럼 1칸보다 높은 블록 때문에 확인
   const z0 = Math.floor(pz - hw), z1 = Math.floor(pz + hw);
-  let top = -1;
+  const out = [];
   for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
     const id = getBlock(x, y, z);
-    if (SOLID[id] && py < y + BH[id] - 1e-4) top = Math.max(top, y + BH[id]);
+    if (!SOLID[id]) continue;
+    for (const bx of shapeOf(id, x, y, z, true)) {
+      const a0 = x + bx[0], a1 = x + bx[3], b0 = y + bx[1], b1 = y + bx[4], c0 = z + bx[2], c1 = z + bx[5];
+      if (px - hw < a1 - 1e-4 && px + hw > a0 + 1e-4 && py < b1 - 1e-4 && py + h > b0 + 1e-4 && pz - hw < c1 - 1e-4 && pz + hw > c0 + 1e-4)
+        out.push([a0, b0, c0, a1, b1, c1]);
+    }
   }
-  return top;
+  return out;
 }
-const collidesBox = (px, py, pz, hw, h) => boxTop(px, py, pz, hw, h) >= 0;
+const collidesBox = (px, py, pz, hw, h) => overlapBoxes(px, py, pz, hw, h).length > 0;
 function moveAxis(e, axis, amt) {
   if (amt === 0) return false;
   const p = e.pos;
   p[axis] += amt;
-  const top = boxTop(p.x, p.y, p.z, e.hw, e.h);
-  if (top < 0) return false;
+  const hits = overlapBoxes(p.x, p.y, p.z, e.hw, e.h);
+  if (!hits.length) return false;
   if (axis === 'y') {
-    if (amt < 0) { p.y = top; e.onGround = true; }
-    else p.y = Math.floor(p.y + e.h) - e.h - 0.001;
+    if (amt < 0) { p.y = Math.max(...hits.map(b => b[4])); e.onGround = true; }
+    else p.y = Math.min(...hits.map(b => b[1])) - e.h - 0.001;
     e.vel.y = 0;
   } else {
-    if (amt > 0) p[axis] = Math.floor(p[axis] + e.hw) - e.hw - 0.001;
-    else p[axis] = Math.floor(p[axis] - e.hw) + 1 + e.hw + 0.001;
+    // 반블록·계단처럼 낮은 턱은 걸어서 올라감
+    if (e.step && e.grounded) {
+      const top = Math.max(...hits.map(b => b[4]));
+      if (top - p.y > 0 && top - p.y <= e.step) {
+        const oy = p.y;
+        p.y = top + 0.001;
+        if (!collidesBox(p.x, p.y, p.z, e.hw, e.h)) return false;
+        p.y = oy;
+      }
+    }
+    const ai = axis === 'x' ? 0 : 2;
+    if (amt > 0) p[axis] = Math.min(...hits.map(b => b[ai])) - e.hw - 0.001;
+    else p[axis] = Math.max(...hits.map(b => b[ai + 3])) + e.hw + 0.001;
     e.vel[axis] = 0;
   }
   if (collidesBox(p.x, p.y, p.z, e.hw, e.h)) p[axis] -= amt;
@@ -1517,6 +1752,7 @@ function moveEntity(e, dt) {
   const maxMove = Math.max(Math.abs(e.vel.x), Math.abs(e.vel.y), Math.abs(e.vel.z)) * dt;
   const steps = Math.max(1, Math.ceil(maxMove / 0.35));
   const sdt = dt / steps;
+  e.grounded = e.onGround;
   e.onGround = false;
   let wall = false;
   for (let i = 0; i < steps; i++) {
@@ -1532,7 +1768,7 @@ const blockAt = v => getBlock(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z))
 // 플레이어
 // =====================================================================
 const player = {
-  pos: new THREE.Vector3(0.5, 60, 0.5), vel: new THREE.Vector3(), hw: 0.3, h: 1.8,
+  pos: new THREE.Vector3(0.5, 60, 0.5), vel: new THREE.Vector3(), hw: 0.3, h: 1.8, step: 0.6,
   yaw: 0, pitch: 0, onGround: false, flying: false, inWater: false, headInWater: false,
   hp: save && save.hp ? save.hp : 20, dead: false, invuln: 0, lastHurt: 0, regenT: 0, peakY: 0,
   food: save && save.food != null ? save.food : 20, sat: save && save.sat != null ? save.sat : 5, exh: 0, foodT: 0,
@@ -1551,7 +1787,8 @@ function findSpawn() {
       const h = terrainHeight(x, z);
       let tree = false;
       for (let dz = -3; dz <= 3 && !tree; dz++) for (let dx = -3; dx <= 3; dx++) if (treeAt(x + dx, z + dz, biomeAt(x + dx, z + dz))) { tree = true; break; }
-      if (h > SEA + 1 && h < 60 && !tree) return [x + 0.5, h + 1.01, z + 0.5];
+      const nearVillage = villagesNear(x, z, x, z, 30).some(v => Math.hypot(v.x - x, v.z - z) < 30);
+      if (h > SEA + 1 && h < 60 && !tree && !nearVillage) return [x + 0.5, h + 1.01, z + 0.5];
       if (r === 0) break;
     }
   }
@@ -1565,6 +1802,13 @@ let shiftHeld = false;
 
 function physics(dt) {
   const p = player.pos;
+  if (player.riding) {
+    const b = player.riding;
+    p.set(b.pos.x, b.pos.y - 0.25, b.pos.z);
+    player.vel.set(0, 0, 0); player.onGround = true; player.peakY = p.y; player.inWater = false;
+    player.headInWater = getBlock(Math.floor(p.x), Math.floor(p.y + EYE), Math.floor(p.z)) === B.WATER;
+    return;
+  }
   if (!chunkReady(p.x, p.z)) return;
   const wasInWater = player.inWater;
   const feet = getBlock(Math.floor(p.x), Math.floor(p.y + 0.2), Math.floor(p.z));
@@ -1602,13 +1846,14 @@ function physics(dt) {
     if (jump) player.vel.y = Math.min(player.vel.y + 30 * dt, 3.2);
     player.vel.y = Math.max(player.vel.y, -3);
   } else {
-    player.vel.y -= 28 * dt;
     if (jump && player.onGround) { player.vel.y = 8.6; exhaust(sprint ? 0.2 : 0.05); }
+    player.vel.y -= 14 * dt; // 중력은 이동 전후로 반씩 (프레임 속도와 무관하게 점프 높이 1.32칸)
     player.vel.y = Math.max(player.vel.y, -45);
   }
 
   const wasOnGround = player.onGround, fallSpeed = player.vel.y;
   moveEntity(player, dt);
+  if (!player.flying && !player.inWater) player.vel.y = Math.max(player.vel.y - 14 * dt, -45);
   const moved = Math.hypot(player.vel.x, player.vel.z) * dt;
   if (!player.flying) exhaust(moved * (player.inWater ? 0.015 : sprint && player.onGround ? 0.1 : 0.01));
   if (player.flying && player.onGround && !jump) player.flying = false;
@@ -1900,6 +2145,14 @@ Object.assign(MOBTEX, {
     return [210, 210, 210];
   }, 12),
   creeper: makeCanvasTex(8, 8, () => [80, 172, 70], 13),
+  robe: makeCanvasTex(8, 8, (x, y) => (y === 0 || x === 0 || x === 7) ? [90, 60, 36] : [120, 84, 52], 15),
+  vFace: makeCanvasTex(8, 8, (x, y) => {
+    if (y === 2 && x >= 1 && x <= 6) return [70, 50, 40]; // 눈썹
+    if (y === 3 && (x === 1 || x === 6)) return [240, 240, 240];
+    if (y === 3 && (x === 2 || x === 5)) return [40, 130, 60];
+    return [186, 136, 104];
+  }, 16),
+  vSkin: makeCanvasTex(8, 8, () => [186, 136, 104], 17),
   creeperFace: makeCanvasTex(8, 8, (x, y) => {
     if ((y === 2 || y === 3) && (x === 1 || x === 2 || x === 5 || x === 6)) return [16, 24, 16];
     if (y === 4 && (x === 3 || x === 4)) return [16, 24, 16];
@@ -1916,6 +2169,7 @@ const MOB = {
   zombie:   { hp: 20, hw: 0.3, h: 1.95, speed: 2.4, burns: true, drops: [[I.FLESH, 0, 2]] },
   skeleton: { hp: 20, hw: 0.3, h: 1.95, speed: 2.2, burns: true, drops: [[I.BONE, 0, 2], [I.ARROW, 0, 2]] },
   creeper:  { hp: 20, hw: 0.3, h: 1.7, speed: 2.1, drops: [[I.GUNPOWDER, 0, 2]] },
+  villager: { hp: 20, hw: 0.3, h: 1.95, passive: true, speed: 0.7, drops: [], village: true },
 };
 const HOSTILE = ['zombie', 'zombie', 'skeleton', 'creeper'];
 function buildMobModel(type) {
@@ -1949,6 +2203,13 @@ function buildMobModel(type) {
     limb(-5, 22, 0, 2, 12, 2, bone, arms).rotation.x = -Math.PI / 2;
     limb(5, 22, 0, 2, 12, 2, bone, arms).rotation.x = -Math.PI / 2;
     box(8, 8, 8, faced(bone, face), 0, 28, 0);
+  } else if (type === 'villager') {
+    const robe = mat(MOBTEX.robe), face = mat(MOBTEX.vFace), skin = mat(MOBTEX.vSkin);
+    limb(-2, 12, 0, 4, 12, 4, robe, legs); limb(2, 12, 0, 4, 12, 4, robe, legs);
+    box(8, 12, 6, robe, 0, 18, 0);
+    box(8, 4, 4, robe, 0, 19, 4); // 팔짱
+    box(8, 10, 8, faced(skin, face), 0, 29, 0);
+    box(2, 4, 2, skin, 0, 26, 5); // 코
   } else if (type === 'creeper') {
     const skin = mat(MOBTEX.creeper), face = mat(MOBTEX.creeperFace);
     for (const [x, z] of [[-2, -3], [2, -3], [-2, 3], [2, 3]]) limb(x, 6, z, 4, 6, 4, skin, legs);
@@ -1967,7 +2228,7 @@ const mobs = [];
 function spawnMob(type, x, y, z) {
   const def = MOB[type], model = buildMobModel(type);
   const m = { type, def, pos: new THREE.Vector3(x, y, z), vel: new THREE.Vector3(), yaw: Math.random() * Math.PI * 2, targetYaw: 0,
-    hw: def.hw, h: def.h, hp: def.hp, onGround: false,
+    hw: def.hw, h: def.h, hp: def.hp, onGround: false, step: 0.6,
     ...model, hurt: 0, hurtCd: 0, flee: 0, wander: 0, walking: false, attackCd: 1, burnT: 0, burning: false, phase: 0,
     sndT: 3 + Math.random() * 10, fuse: 0 };
   m.targetYaw = m.yaw;
@@ -2027,7 +2288,9 @@ function updateMob(m, dt) {
     return m.walking ? spd : 0;
   };
   const hunting = !m.def.passive && mode === 'survival' && !player.dead && dist < 20;
-  if (m.def.passive) {
+  if (m.home && Math.hypot(m.home.x - m.pos.x, m.home.z - m.pos.z) > 18 && m.flee <= 0) {
+    m.targetYaw = Math.atan2(m.home.x - m.pos.x, m.home.z - m.pos.z); move = m.def.speed;
+  } else if (m.def.passive) {
     if (m.flee > 0) {
       m.flee -= dt; m.wander -= dt; move = 3.4;
       if (m.wander <= 0) { m.targetYaw = Math.atan2(-dxp, -dzp) + (Math.random() - 0.5) * 1.5; m.wander = 0.7; }
@@ -2231,13 +2494,86 @@ function updateTnts(dt) {
   }
 }
 
+// 보트: 물 위에 띄우고 우클릭으로 타서 WASD로 몰고, Shift로 내림
+const boats = [];
+const boatMat = new THREE.MeshBasicMaterial({ map: pixelTex(faceCanvas(T.PLANKS, 0)) });
+tintedMats.add(boatMat);
+const boatGeos = [[0.9, 0.1, 1.4, 0, 0.05, 0], [0.1, 0.35, 1.4, -0.45, 0.25, 0], [0.1, 0.35, 1.4, 0.45, 0.25, 0],
+  [0.9, 0.35, 0.1, 0, 0.25, -0.7], [0.9, 0.35, 0.1, 0, 0.25, 0.7]].map(([w, h, d, x, y, z]) => {
+  const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y, z); return g;
+});
+function spawnBoat(x, y, z, yaw) {
+  const mesh = new THREE.Group();
+  for (const g of boatGeos) mesh.add(new THREE.Mesh(g, boatMat));
+  scene.add(mesh);
+  const b = { pos: new THREE.Vector3(x, y, z), vel: new THREE.Vector3(), yaw: yaw || 0, hw: 0.55, h: 0.45, onGround: false, mesh, hits: 0 };
+  mesh.position.copy(b.pos); mesh.rotation.y = b.yaw;
+  boats.push(b);
+  return b;
+}
+function removeBoat(b) {
+  if (player.riding === b) dismount();
+  scene.remove(b.mesh);
+  boats.splice(boats.indexOf(b), 1);
+}
+function placeBoat() {
+  const hit = raycast(5, true);
+  if (!hit) return;
+  if (hit.id !== B.WATER && hit.n[1] !== 1) return;
+  spawnBoat(hit.x + 0.5, hit.id === B.WATER ? hit.y + 0.8 : hit.y + 1, hit.z + 0.5, player.yaw);
+  sfxBlock(B.PLANKS, 'place'); consumeSelected();
+}
+function board(b) {
+  player.riding = b; player.flying = false; player.vel.set(0, 0, 0);
+  toast('W/S로 앞뒤, 시점으로 방향을 바꿉니다. Shift로 내립니다');
+}
+function dismount() {
+  const b = player.riding;
+  if (!b) return;
+  player.riding = null;
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const x = b.pos.x + dx * 1.1, z = b.pos.z + dz * 1.1;
+    for (let dy = 0; dy < 3; dy++) {
+      const y = Math.floor(b.pos.y) + dy;
+      if (!collidesBox(x, y, z, player.hw, player.h) && SOLID[getBlock(Math.floor(x), y - 1, Math.floor(z))]) { player.pos.set(x, y, z); player.peakY = y; return; }
+    }
+  }
+  player.pos.set(b.pos.x, b.pos.y + 0.5, b.pos.z); player.peakY = player.pos.y;
+}
+function updateBoats(dt) {
+  for (const b of boats) {
+    if (!chunkReady(b.pos.x, b.pos.z)) continue;
+    const fx = Math.floor(b.pos.x), fz = Math.floor(b.pos.z);
+    const at = getBlock(fx, Math.floor(b.pos.y + 0.15), fz), below = getBlock(fx, Math.floor(b.pos.y - 0.1), fz);
+    const onWater = at === B.WATER || below === B.WATER;
+    if (at === B.WATER) b.vel.y = Math.min(b.vel.y + 20 * dt, 2.5);
+    else if (below === B.WATER) { b.vel.y += (Math.floor(b.pos.y - 0.1) + 0.9 - b.pos.y) * 40 * dt; b.vel.y *= Math.pow(0.001, dt); }
+    else b.vel.y = Math.max(b.vel.y - 20 * dt, -30);
+    if (player.riding === b) {
+      let fwd = -touchMove.y;
+      if (keys.has('KeyW')) fwd += 1;
+      if (keys.has('KeyS')) fwd -= 1;
+      b.yaw += wrapAngle(player.yaw - b.yaw) * Math.min(1, dt * 4);
+      const max = onWater ? 7 : 1.2, k = Math.min(1, dt * (onWater ? 1.5 : 4));
+      b.vel.x += (-Math.sin(b.yaw) * fwd * max - b.vel.x) * k;
+      b.vel.z += (-Math.cos(b.yaw) * fwd * max - b.vel.z) * k;
+    } else {
+      const d = Math.pow(onWater ? 0.3 : 0.01, dt);
+      b.vel.x *= d; b.vel.z *= d;
+    }
+    moveEntity(b, dt);
+    b.mesh.position.copy(b.pos);
+    b.mesh.rotation.y = b.yaw;
+  }
+}
+
 let spawnTimer = 0;
 function spawnTick(dt) {
   spawnTimer -= dt;
   if (spawnTimer > 0) return;
   spawnTimer = 1;
   let passive = 0, hostile = 0;
-  for (const m of mobs) if (m.def.passive) passive++; else hostile++;
+  for (const m of mobs) if (m.def.village) continue; else if (m.def.passive) passive++; else hostile++;
   const pick = list => list[Math.random() * list.length | 0];
   const tryAt = type => {
     const a = Math.random() * Math.PI * 2, d = 18 + Math.random() * 26;
@@ -2256,6 +2592,21 @@ function spawnTick(dt) {
     }
   };
   if (passive < 12 && Math.random() < 0.6) tryAt(pick(['pig', 'cow', 'sheep']));
+  // 가까운 마을에 주민이 3명보다 적으면 우물 근처에 생김
+  for (const v of villagesNear(player.pos.x, player.pos.z, player.pos.x, player.pos.z, 70)) {
+    if (Math.hypot(v.x - player.pos.x, v.z - player.pos.z) > 70 || !chunkReady(v.x, v.z)) continue;
+    if (mobs.filter(m => m.home === v).length >= 3) continue;
+    const x = Math.floor(v.x + (Math.random() - 0.5) * 16), z = Math.floor(v.z + (Math.random() - 0.5) * 16);
+    for (let y = CH - 2; y > 1; y--) {
+      const id = getBlock(x, y, z);
+      if (id === B.AIR || !SOLID[id]) continue;
+      if (id !== B.LEAVES && getBlock(x, y + 1, z) === B.AIR && getBlock(x, y + 2, z) === B.AIR) {
+        const m = spawnMob('villager', x + 0.5, y + 1, z + 0.5);
+        m.home = v; m.trades = pickTrades(Math.random() * 1e9 | 0);
+      }
+      break;
+    }
+  }
   if (light < 0.45 && mode === 'survival' && hostile < 8) tryAt(pick(HOSTILE));
   // 어두운 동굴에서는 낮에도 적이 생김
   if (mode === 'survival' && hostile < 10 && Math.random() < 0.5) {
@@ -2373,6 +2724,9 @@ function sfxMob(type, kind, dist) {
     for (let i = 0; i < 3; i++) sfxTone(360 * p, 0.12, { type: 'square', vol: 0.06 * v, to: 330 * p, lp: 1400, delay: i * 0.1 });
   } else if (type === 'skeleton') {
     for (let i = 0; i < 4; i++) sfxNoise(0.03, 2500 + Math.random() * 1500, { q: 4, vol: 0.3 * v, delay: i * 0.07 });
+  } else if (type === 'villager') {
+    sfxTone(190 * p, 0.25, { type: 'sawtooth', vol: 0.09 * v, to: 150 * p, lp: 700, attack: 0.03 });
+    sfxTone(170 * p, 0.2, { type: 'sawtooth', vol: 0.07 * v, to: 200 * p, lp: 700, delay: 0.22, attack: 0.03 });
   } else if (type === 'creeper') {
     if (kind === 'hurt') sfxNoise(0.2, 1500, { type: 'highpass', vol: 0.2 * v });
   } else {
@@ -2386,7 +2740,7 @@ function sfxMob(type, kind, dist) {
 // 조준, 캐기, 설치, 공격
 // =====================================================================
 const lookDir = () => new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
-function raycast(maxDist) {
+function raycast(maxDist, hitWater) {
   const o = camera.position, d = lookDir();
   let x = Math.floor(o.x), y = Math.floor(o.y), z = Math.floor(o.z);
   const sx = Math.sign(d.x), sy = Math.sign(d.y), sz = Math.sign(d.z);
@@ -2399,17 +2753,18 @@ function raycast(maxDist) {
   let n = [0, 0, 0], t = 0;
   while (t <= maxDist) {
     const id = getBlock(x, y, z);
-    if (id !== B.AIR && id !== B.WATER) return { x, y, z, n, id, t };
+    if (id !== B.AIR && (id !== B.WATER || hitWater)) return { x, y, z, n, id, t };
     if (tmx < tmy && tmx < tmz) { x += sx; t = tmx; tmx += tdx; n = [-sx, 0, 0]; }
     else if (tmy < tmz) { y += sy; t = tmy; tmy += tdy; n = [0, -sy, 0]; }
     else { z += sz; t = tmz; tmz += tdz; n = [0, 0, -sz]; }
   }
   return null;
 }
-function pickMob(maxT) {
+// 보는 방향의 엔티티 (몹이나 보트) 중 가장 가까운 것
+function pickMob(maxT, list = mobs) {
   const o = camera.position, d = lookDir();
   let best = null, bt = maxT;
-  for (const m of mobs) {
+  for (const m of list) {
     const min = [m.pos.x - m.hw, m.pos.y, m.pos.z - m.hw], max = [m.pos.x + m.hw, m.pos.y + m.h, m.pos.z + m.hw];
     const oa = [o.x, o.y, o.z], da = [d.x, d.y, d.z];
     let t0 = 0, t1 = bt, ok = true;
@@ -2440,6 +2795,53 @@ function breakTime(id) {
 }
 const TIER_NAME = ['', '나무', '돌', '철', '다이아몬드'];
 const ckey = (x, y, z) => x + ',' + y + ',' + z;
+// 주민 거래: 주민마다 5가지를 골라 가짐
+const TRADES = [
+  [[I.WHEAT, 20], [I.EMERALD, 1]], [[I.COAL, 15], [I.EMERALD, 1]], [[I.LEATHER, 6], [I.EMERALD, 1]],
+  [[B.WOOL, 12], [I.EMERALD, 1]], [[I.PORK, 10], [I.EMERALD, 1]], [[I.BONE, 10], [I.EMERALD, 1]],
+  [[I.EMERALD, 1], [I.BREAD, 6]], [[I.EMERALD, 1], [I.ARROW, 16]], [[I.EMERALD, 1], [B.GLASS, 8]],
+  [[I.EMERALD, 2], [I.STEAK, 5]], [[I.EMERALD, 3], [I.IRON_PICK, 1]], [[I.EMERALD, 4], [armorId(1, 1), 1]],
+  [[I.EMERALD, 6], [I.DIAMOND, 1]], [[I.EMERALD, 2], [B.TORCH, 16]], [[I.EMERALD, 5], [I.BOW, 1]],
+];
+function pickTrades(seed) {
+  const r = mulberry32(seed), sells = TRADES.filter(t => t[1][0] === I.EMERALD), buys = TRADES.filter(t => t[1][0] !== I.EMERALD);
+  const take = (list, n) => { const a = [...list]; for (let i = a.length - 1; i > 0; i--) { const j = r() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a.slice(0, n); };
+  return [...take(sells, 2), ...take(buys, 3)];
+}
+let tradeMob = null;
+function renderTrades(box, title, note) {
+  title.textContent = '주민과 거래';
+  note.textContent = '왼쪽 물건을 주고 오른쪽 물건을 받습니다. 에메랄드는 주민에게 팔아서 모읍니다.';
+  for (const [[gid, gn], [rid, rn]] of tradeMob.trades) {
+    const ok = countItem(gid) >= gn;
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'recipe trade'; btn.disabled = !ok;
+    const c1 = document.createElement('canvas'); c1.width = c1.height = 32; c1.getContext('2d').drawImage(icon(gid), 0, 0);
+    const c2 = document.createElement('canvas'); c2.width = c2.height = 32; c2.getContext('2d').drawImage(icon(rid), 0, 0);
+    const txt = document.createElement('div');
+    txt.innerHTML = `<b>${ITEMS[gid].name} ${gn} → ${ITEMS[rid].name}${rn > 1 ? ' ×' + rn : ''}</b><small class="${ok ? '' : 'miss'}">${ITEMS[gid].name} ${countItem(gid)}개 있음</small>`;
+    btn.append(c1, txt, c2);
+    btn.addEventListener('click', () => {
+      if (countItem(gid) < gn) return;
+      removeItem(gid, gn);
+      const left = addItem(rid, rn);
+      if (left) dropFromPlayer(rid, left);
+      sfxMob('villager', 'idle', 0); sfx.pop();
+      refreshInvUI(); scheduleSave();
+    });
+    box.appendChild(btn);
+  }
+}
+// 문: 위아래 두 칸을 함께 열고 닫음
+function doorPartner(x, y, z) { return BLOCKS[getBlock(x, y, z)].door.top ? y - 1 : y + 1; }
+function toggleDoor(x, y, z) {
+  const id = getBlock(x, y, z), py = doorPartner(x, y, z), pid = getBlock(x, py, z);
+  const flip = v => B.DOOR + ((v - B.DOOR) ^ 2); // 열림 비트 뒤집기 (문 번호 기준)
+  setBlock(x, y, z, flip(id));
+  if (BLOCKS[pid].door) setBlock(x, py, z, flip(pid));
+  const open = BLOCKS[flip(id)].door.open;
+  sfxTone(open ? 220 : 160, 0.12, { type: 'triangle', vol: 0.15, to: open ? 260 : 120 }); sfxNoise(0.1, 600, { q: 2, vol: 0.2 });
+}
 function spillChest(x, y, z) {
   const k = ckey(x, y, z), arr = chests.get(k);
   if (!arr) return;
@@ -2470,6 +2872,11 @@ function breakBlockAt(hit) {
   const b = BLOCKS[hit.id];
   if (hit.id === B.CHEST) spillChest(hit.x, hit.y, hit.z);
   if (b.hard === Infinity && mode !== 'creative') return;
+  if (b.door) {
+    const py = doorPartner(hit.x, hit.y, hit.z);
+    if (BLOCKS[getBlock(hit.x, py, hit.z)].door) setBlock(hit.x, py, hit.z, B.AIR);
+    if (b.door.top) hit.id--; // 윗부분을 부숴도 문 한 개가 나오게
+  }
   crops.delete(ckey(hit.x, hit.y, hit.z));
   if (hit.id === B.BEDROCK && hit.y === 0) return;
   let fill = B.AIR;
@@ -2541,15 +2948,38 @@ function attack(m) {
 function useItem() {
   const hit = raycast(6);
   const sneaking = shiftHeld || keys.has('ShiftLeft');
+  const boatHit = !player.riding && pickMob(hit ? hit.t : 4, boats);
+  if (boatHit) { board(boatHit); return; }
+  const who = pickMob(hit ? hit.t : 4);
+  if (who && who.type === 'villager') {
+    tradeMob = who; who.walking = false; who.wander = 5;
+    who.targetYaw = Math.atan2(player.pos.x - who.pos.x, player.pos.z - who.pos.z);
+    sfxMob('villager', 'idle', 0);
+    openInventory('trade');
+    return;
+  }
   if (hit && hit.id === B.TABLE && !sneaking) { openInventory('table'); return; }
   if (hit && hit.id === B.FURNACE && !sneaking) { openInventory('furnace'); return; }
   if (hit && hit.id === B.CHEST && !sneaking) { openChestAt(hit.x, hit.y, hit.z); return; }
   if (hit && hit.id === B.BED && !sneaking) { sleepAt(hit.x, hit.y, hit.z); return; }
+  if (hit && BLOCKS[hit.id].door && !sneaking) { toggleDoor(hit.x, hit.y, hit.z); return; }
   if (hit && hit.id === B.TNT && !sneaking) { setBlock(hit.x, hit.y, hit.z, B.AIR); primeTnt(hit.x, hit.y, hit.z, 3); return; }
   const s = heldItem();
   if (!s) return;
   const info = ITEMS[s.id];
   if (info.bow) return; // 활은 누르고 있다가 놓을 때 쏨 (interact)
+  if (info.door) {
+    if (!hit || hit.n[1] !== 1 || !LOP[hit.id]) return;
+    const x = hit.x, y = hit.y + 1, z = hit.z;
+    if (getBlock(x, y, z) !== B.AIR || getBlock(x, y + 1, z) !== B.AIR) return;
+    const p = player.pos;
+    if (x + 1 > p.x - player.hw && x < p.x + player.hw && z + 1 > p.z - player.hw && z < p.z + player.hw && y + 2 > p.y && y < p.y + player.h) return;
+    const look = lookDir(), f = Math.abs(look.x) > Math.abs(look.z) ? (look.x > 0 ? 1 : 3) : (look.z > 0 ? 2 : 0);
+    setBlock(x, y, z, B.DOOR + f * 4); setBlock(x, y + 1, z, B.DOOR + f * 4 + 1);
+    sfxBlock(B.PLANKS, 'place'); consumeSelected();
+    return;
+  }
+  if (info.boat) { placeBoat(); return; }
   if (info.tool === 'hoe') {
     if (hit && (hit.id === B.GRASS || hit.id === B.DIRT) && hit.n[1] === 1 && getBlock(hit.x, hit.y + 1, hit.z) === B.AIR) {
       setBlock(hit.x, hit.y, hit.z, B.FARMLAND); sfxBlock(B.DIRT, 'place'); wearSelected(1);
@@ -2587,6 +3017,8 @@ function useItem() {
   const cur = getBlock(x, y, z);
   if (cur !== B.AIR && cur !== B.WATER) return;
   let placeId = s.id;
+  const look = lookDir(), facing = Math.abs(look.x) > Math.abs(look.z) ? (look.x > 0 ? 1 : 3) : (look.z > 0 ? 2 : 0);
+  if (BLOCKS[s.id].family !== undefined) placeId = BLOCKS[s.id].family + facing;
   if (s.id === B.TORCH) {
     // 바닥 위에는 세워서, 벽에는 붙여서. 천장이나 물속, 빛을 통과하는 블록에는 못 붙임
     const n = hit.n;
@@ -2609,6 +3041,8 @@ function pickBlock() {
   const hit = raycast(6);
   if (!hit) return;
   if (BLOCKS[hit.id].torch) hit.id = B.TORCH;
+  if (BLOCKS[hit.id].family !== undefined) hit.id = BLOCKS[hit.id].family;
+  if (BLOCKS[hit.id].door) hit.id = I.DOOR;
   for (let i = 0; i < 9; i++) if (inv[i] && inv[i].id === hit.id) { selectSlot(i); return; }
   if (mode === 'creative') { inv[selected] = { id: hit.id, count: 64 }; refreshInvUI(); selectSlot(selected); }
 }
@@ -2633,7 +3067,14 @@ function interact(dt) {
   attackCd -= dt;
   const hit = raycast(6);
   const mob = pickMob(Math.min(3.5, hit ? hit.t : 3.5));
-  if (act.left && !ui) {
+  const boatHit = !mob && pickMob(Math.min(3.5, hit ? hit.t : 3.5), boats.filter(b => b !== player.riding));
+  if (act.left && !ui && boatHit) {
+    mine.active = false;
+    if (attackCd <= 0) {
+      attackCd = 0.3; boatHit.hits++; sfxBlock(B.PLANKS, 'dig');
+      if (boatHit.hits >= 3) { removeBoat(boatHit); if (mode === 'survival') spawnDrop(I.BOAT, 1, boatHit.pos.x, boatHit.pos.y + 0.5, boatHit.pos.z); }
+    }
+  } else if (act.left && !ui) {
     if (mob) {
       mine.active = false;
       if (attackCd <= 0) { attack(mob); attackCd = 0.45; }
@@ -2931,6 +3372,7 @@ function renderRecipes() {
   box.innerHTML = '';
   box.className = '';
   if (invStation === 'chest' && openChest) { renderChest(box, title, note); return; }
+  if (invStation === 'trade' && tradeMob) { renderTrades(box, title, note); return; }
   if (invStation === 'furnace') { renderSmelting(box, title, note); return; }
   if (mode === 'creative') {
     title.textContent = '모든 아이템';
@@ -2968,7 +3410,7 @@ function renderRecipes() {
     box.appendChild(btn);
   }
 }
-let lastPointer = { x: innerWidth / 2, y: innerHeight / 2, inside: false, t: 0 };
+let lastPointer = { x: innerWidth / 2, y: innerHeight / 2, inside: false, t: 0, moved: false };
 function refreshInvUI() {
   hotSlots.forEach((el, i) => paintSlot(el, inv[i]));
   if (ui === 'inv') {
@@ -3067,6 +3509,7 @@ window.addEventListener('keydown', e => {
     }
   }
   if (code === 'KeyF') toggleFly();
+  if ((code === 'ShiftLeft' || code === 'ShiftRight') && player.riding) dismount();
   if (code === 'F3') showDebug = !showDebug;
 });
 window.addEventListener('keyup', e => { shiftHeld = e.shiftKey; keys.delete(normCode(e)); });
@@ -3106,33 +3549,51 @@ function look(dx, dy, sens) {
   player.yaw -= dx * sens;
   player.pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, player.pitch - dy * sens));
 }
-// 마우스 잠금이 안 될 때(아이패드 앱 등)의 시점 조작
-//  - 'scroll': 트랙패드 두 손가락 스와이프로 회전. 커서는 제자리에 있음 (기본)
-//  - 'cursor': 커서를 움직이는 대로 회전, 화면 가장자리에 두면 계속 회전
-const cursorLook = () => playing && !ui && !isLocked() && lastInput !== 'touch' && settings.look === 'cursor';
+// 마우스 잠금이 안 될 때(아이패드 앱 등)의 시점 조작. 두 손가락 스와이프는 모든 방식에서 동작
+//  - 'stick': 커서를 조이스틱처럼 사용. 가운데서 멀수록 빠르게 돌고, 가운데 두면 멈춤 (기본)
+//             커서가 게임 화면 밖으로 나가도 마지막 위치 기준으로 계속 돔
+//  - 'cursor': 커서를 움직이는 대로 회전, 가장자리(또는 밖)에 두면 계속 회전
+//  - 'scroll': 스와이프만 사용
+const freeLook = () => playing && !ui && !isLocked() && lastInput !== 'touch';
+const steerRing = document.getElementById('steer-ring'), steerDot = document.getElementById('steer-dot');
 document.addEventListener('pointermove', e => {
   if (e.pointerType === 'touch') return;
   const prev = lastPointer;
-  lastPointer = { x: e.clientX, y: e.clientY, inside: true, t: performance.now() };
+  lastPointer = { x: e.clientX, y: e.clientY, inside: true, t: performance.now(), moved: true,
+    overHud: !!(e.target && e.target.closest && e.target.closest('#hud')) };
   if (ui === 'inv' && cursorStack) { heldEl.style.left = (e.clientX - 20) + 'px'; heldEl.style.top = (e.clientY - 20) + 'px'; }
   if (!playing || ui) return;
   if (lastInput === 'touch') { lastInput = 'mouse'; updateTouchUI(); }
   let mx = e.movementX, my = e.movementY;
   if (Math.abs(mx) > 250 || Math.abs(my) > 250) return; // 잠금 직후 튀는 값
   if (isLocked()) { look(mx, my, 0.0022 * settings.sens); return; }
-  if (!cursorLook() || !prev.inside) return;
+  if (settings.look !== 'cursor' || !freeLook() || !prev.inside) return;
   if (!mx && !my) { mx = e.clientX - prev.x; my = e.clientY - prev.y; }
   look(mx, my, 0.0045 * settings.sens);
 });
 document.addEventListener('pointerleave', () => { lastPointer.inside = false; });
 document.documentElement.addEventListener('mouseleave', () => { lastPointer.inside = false; });
-function edgeTurn(dt) {
-  if (!cursorLook() || !lastPointer.inside) return;
-  const ex = lastPointer.x / innerWidth, ey = lastPointer.y / innerHeight;
-  const edge = 0.05, rate = 2.2 * settings.sens;
-  if (ex < edge) player.yaw += rate * dt; else if (ex > 1 - edge) player.yaw -= rate * dt;
-  if (ey < edge) player.pitch = Math.min(Math.PI / 2 - 0.01, player.pitch + rate * 0.6 * dt);
-  else if (ey > 1 - edge) player.pitch = Math.max(-Math.PI / 2 + 0.01, player.pitch - rate * 0.6 * dt);
+function cursorSteer(dt) {
+  const stick = freeLook() && settings.look === 'stick';
+  steerRing.hidden = !stick;
+  steerDot.hidden = !stick || !lastPointer.moved;
+  if (!freeLook() || !lastPointer.moved) return;
+  const clampP = v => Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, v));
+  const nx = Math.max(-1, Math.min(1, lastPointer.x / innerWidth * 2 - 1));
+  const ny = Math.max(-1, Math.min(1, lastPointer.y / innerHeight * 2 - 1));
+  if (stick) {
+    steerDot.style.transform = `translate(${lastPointer.x}px, ${lastPointer.y}px)`;
+    if (lastPointer.overHud) return; // 핫바를 누르러 갈 때는 멈춤
+    const dz = 0.2, f = v => Math.sign(v) * Math.max(0, (Math.abs(v) - dz) / (1 - dz));
+    const sx = f(nx), sy = f(ny), rate = 3 * settings.sens;
+    player.yaw -= sx * Math.abs(sx) * rate * dt;
+    player.pitch = clampP(player.pitch - sy * Math.abs(sy) * rate * 0.7 * dt);
+  } else if (settings.look === 'cursor') {
+    // 가장자리 8% 안에 있거나 밖으로 나갔으면 그쪽으로 계속 회전
+    const edge = 0.84, rate = 2.4 * settings.sens;
+    if (Math.abs(nx) > edge) player.yaw -= Math.sign(nx) * rate * dt;
+    if (Math.abs(ny) > edge) player.pitch = clampP(player.pitch - Math.sign(ny) * rate * 0.6 * dt);
+  }
 }
 // 방향키로도 시점 회전
 function keyLook(dt) {
@@ -3178,7 +3639,7 @@ document.addEventListener('wheel', e => {
   e.preventDefault(); // 페이지 스크롤과 핀치 확대 막기
   if (e.ctrlKey) return;
   const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
-  if (!isLocked() && lastInput !== 'touch' && settings.look === 'scroll') {
+  if (!isLocked() && lastInput !== 'touch') {
     const dir = settings.invert ? 1 : -1;
     look(e.deltaX * unit * dir, e.deltaY * unit * dir, 0.0035 * settings.sens);
     return;
@@ -3225,7 +3686,7 @@ canvas.addEventListener('pointerup', endLook); canvas.addEventListener('pointerc
     el.addEventListener('pointerdown', e => { e.preventDefault(); down(); });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, () => up && up());
   };
-  hold('t-jump', () => touchState.jump = true, () => touchState.jump = false);
+  hold('t-jump', () => { if (player.riding) dismount(); else touchState.jump = true; }, () => touchState.jump = false);
   hold('t-fly', toggleFly);
   hold('t-break', () => { act.left = true; act.repeat = 0; }, () => act.left = false);
   hold('t-place', () => { act.right = true; act.repeat = 0; }, () => act.right = false);
@@ -3242,6 +3703,7 @@ function updateMenu() {
   document.getElementById('mode-toggle').textContent = mode === 'survival' ? '크리에이티브로 전환' : '서바이벌로 전환';
 }
 function startPlaying() {
+  lastPointer.moved = false;
   overlay.hidden = true;
   ui = null;
   playing = true;
@@ -3295,6 +3757,8 @@ function newWorld(newMode) {
   for (const a of arrows) scene.remove(a.mesh);
   arrows.length = 0;
   for (const t of tnts) scene.remove(t.mesh);
+  player.riding = null;
+  while (boats.length) removeBoat(boats[0]);
   tnts.length = 0;
   if (mode === 'creative') CREATIVE_HOTBAR.forEach((id, i) => inv[i] = { id, count: 64 });
   initNoise();
@@ -3396,7 +3860,7 @@ function frame(now) {
   const active = playing && ui !== 'menu';
   if (active && !player.dead) {
     physics(dt);
-    edgeTurn(dt);
+    cursorSteer(dt);
     if (!ui) keyLook(dt);
     player.invuln -= dt;
     if (mode === 'survival') hungerTick(dt);
@@ -3416,6 +3880,7 @@ function frame(now) {
     updateTnts(dt);
     updateEffects(dt);
     growCrops(dt);
+    updateBoats(dt);
   } else { highlight.visible = false; crack.visible = false; }
   updateSky(active ? dt : 0);
   tintEl.hidden = !player.headInWater;
@@ -3443,6 +3908,7 @@ selectSlot(0);
 updateHearts();
 setTimeout(() => {
   preload();
+  if (save && save.boats) for (const [x, y, z, yaw] of save.boats) spawnBoat(x, y, z, yaw);
   document.getElementById('loadmsg').textContent = save
     ? '저장된 월드를 불러왔습니다.'
     : '나무를 캐서 판자와 작업대를 만들고, 도구를 만들어 돌을 캐 보세요. 동굴은 어두우니 횃불(석탄 + 막대기)을 챙기세요. 밤과 어두운 곳에는 좀비가 나옵니다.';
