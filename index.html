@@ -36,7 +36,9 @@
   #crosshair::before, #crosshair::after { content: ""; position: absolute; background: #fff; }
   #crosshair::before { left: 10px; top: 0; width: 2px; height: 22px; }
   #crosshair::after { top: 10px; left: 0; height: 2px; width: 22px; }
-  #effects { position: fixed; right: 10px; top: calc(10px + env(safe-area-inset-top, 0px)); font-size: 12px; line-height: 1.5; text-align: right;
+  #rightcol { position: fixed; right: 10px; top: calc(64px + env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; }
+  #minimap { width: 128px; height: 128px; image-rendering: pixelated; border: 2px solid rgba(0,0,0,.7); border-radius: 4px; background: #000; }
+  #effects { font-size: 12px; line-height: 1.5; text-align: right;
     text-shadow: 1px 1px 0 var(--shadow); pointer-events: none; font-variant-numeric: tabular-nums; white-space: pre; color: #e8d8ff; }
   #info { position: fixed; left: 10px; top: calc(10px + env(safe-area-inset-top, 0px)); font-size: 12px; line-height: 1.5;
     text-shadow: 1px 1px 0 var(--shadow); pointer-events: none; font-variant-numeric: tabular-nums; white-space: pre; }
@@ -135,6 +137,7 @@
   #t-break { right: 96px; bottom: calc(180px + env(safe-area-inset-bottom, 0px)); }
   #t-place { right: 24px; bottom: calc(180px + env(safe-area-inset-bottom, 0px)); }
   #t-inv { right: 70px; top: calc(12px + env(safe-area-inset-top, 0px)); width: 48px; height: 44px; }
+  #t-map { right: 124px; top: calc(12px + env(safe-area-inset-top, 0px)); width: 48px; height: 44px; font-size: 11px; }
   #t-menu { right: 16px; top: calc(12px + env(safe-area-inset-top, 0px)); width: 44px; height: 44px; }
   @media (max-width: 480px) { .card h1 { font-size: 28px; } #hearts i, #armorbar i, #hunger i { width: 14px; height: 14px; } }
 </style>
@@ -155,7 +158,7 @@
 <div id="blockname"></div>
 <div id="sleep"></div>
 <div id="bossbar" hidden><b>엔더 드래곤</b><div class="bb-track"><i id="bb-fill"></i></div></div>
-<div id="effects"></div><div id="hud"><div id="armorbar" hidden></div><div class="barrow"><div id="hearts"></div><div id="hunger"></div></div><div id="xpbar"><i id="xpfill"></i><span id="xplevel"></span></div><div id="hotbar"></div></div>
+<div id="rightcol"><canvas id="minimap" width="64" height="64" hidden></canvas><div id="effects"></div></div><div id="hud"><div id="armorbar" hidden></div><div class="barrow"><div id="hearts"></div><div id="hunger"></div></div><div id="xpbar"><i id="xpfill"></i><span id="xplevel"></span></div><div id="hotbar"></div></div>
 
 <div id="touch" hidden>
   <div id="stick" class="pad"><div id="knob"></div></div>
@@ -165,6 +168,7 @@
   <div id="t-place" class="pad tbtn">USE</div>
   <div id="t-inv" class="pad tbtn">INV</div>
   <div id="t-menu" class="pad tbtn">II</div>
+  <div id="t-map" class="pad tbtn">MAP</div>
 </div>
 
 <div id="invscreen" hidden>
@@ -204,6 +208,7 @@
       <kbd>E</kbd><span>인벤토리와 제작</span>
       <kbd>1-9 / Tab / [ ]</kbd><span>아이템 고르기 (마우스 잠금 중엔 휠도 가능)</span>
       <kbd>Q</kbd><span>들고 있는 아이템 버리기</span>
+      <kbd>M</kbd><span>미니맵 켜기/끄기</span>
       <kbd>F</kbd><span>비행 (크리에이티브)</span>
       <kbd>Esc</kbd><span>일시정지</span>
     </div>
@@ -298,7 +303,7 @@ const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_
   BLAZE_POWDER: 163, ENDER_PEARL: 164, EYE_OF_ENDER: 165,
   GHAST_TEAR: 166, NETHER_BRICK_ITEM: 167, REDSTONE: 168,
   STRING: 169, FISHING_ROD: 170, RAW_FISH: 171, COOKED_FISH: 172,
-  BOTTLE: 173, WATER_BOTTLE: 174, P_HEAL: 175, P_REGEN: 176, P_SPEED: 177, P_FIRE: 178, P_NIGHT: 179, P_STRENGTH: 180, P_JUMP: 181, SHEARS: 182 };
+  BOTTLE: 173, WATER_BOTTLE: 174, P_HEAL: 175, P_REGEN: 176, P_SPEED: 177, P_FIRE: 178, P_NIGHT: 179, P_STRENGTH: 180, P_JUMP: 181, SHEARS: 182, BONE_MEAL: 183 };
 // 갑옷: 132부터 [가죽, 철, 다이아몬드] × [투구, 흉갑, 레깅스, 부츠]
 const ARMOR_SET = [['leather', '가죽', 5, [1, 3, 2, 1]], ['iron', '철', 15, [2, 6, 5, 2]], ['diamond', '다이아몬드', 33, [3, 8, 6, 3]]];
 const ARMOR_PART = ['투구', '흉갑', '레깅스', '부츠'], ARMOR_BASE_DUR = [11, 16, 15, 13], ARMOR_COST = [5, 8, 7, 4];
@@ -529,6 +534,7 @@ ITEMS[I.GHAST_TEAR] = { name: '가스트 눈물', stack: 64 };
 ITEMS[I.NETHER_BRICK_ITEM] = { name: '네더 벽돌 조각', stack: 64 };
 ITEMS[I.REDSTONE] = { name: '레드스톤 가루', stack: 64, placeAs: B.DUST_OFF };
 ITEMS[I.STRING] = { name: '실', stack: 64 };
+ITEMS[I.BONE_MEAL] = { name: '뼛가루', stack: 64, fertilizer: true };
 ITEMS[I.SHEARS] = { name: '가위', stack: 1, dur: 238, shears: true };
 ITEMS[I.BOTTLE] = { name: '유리병', stack: 16, bottle: true };
 ITEMS[I.WATER_BOTTLE] = { name: '물병', stack: 1 };
@@ -600,6 +606,7 @@ RECIPES.push(
   { out: [I.FISHING_ROD, 1], in: [[I.STICK, 3], [I.STRING, 2]], table: true },
   { out: [I.BOTTLE, 3], in: [[B.GLASS, 3]] },
   { out: [I.SHEARS, 1], in: [[I.IRON_INGOT, 2]] },
+  { out: [I.BONE_MEAL, 3], in: [[I.BONE, 1]] },
   { out: [B.BREW_STAND, 1], in: [[I.BLAZE_ROD, 1], [B.COBBLE, 3]], table: true },
   ...POTIONS.map(([id, , , , ing]) => ({ out: [id, 1], in: [[I.WATER_BOTTLE, 1], [ing, 1]], brew: true })),
   { out: [B.WOOL, 1], in: [[I.STRING, 4]] },
@@ -628,7 +635,7 @@ const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [B.BIRCH_LOG, 1.5], [I
 const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.CHEST, B.BED, B.WOOL, B.TNT, B.BEDROCK,
   B.SANDSTONE, B.BIRCH_LOG, B.STONE_BRICK, B.PLANK_SLAB, B.COBBLE_SLAB, B.STONE_SLAB, B.PLANK_STAIRS, B.COBBLE_STAIRS, B.FENCE, B.ICE, B.CACTUS, B.FLOWER_RED, B.FLOWER_YELLOW,
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
-  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
+  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
   I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD,
   B.PISTON + 3, B.STICKY + 3, B.REDSTONE_ORE, B.LEVER_OFF, B.BUTTON_OFF, B.PLATE_OFF, B.RS_TORCH, B.LAMP_OFF, B.REDSTONE_BLOCK, I.REDSTONE,
@@ -1779,6 +1786,8 @@ function drawItemIcon(g, id) {
       else g.fillStyle = 'rgba(210,230,245,.35)', g.fillRect(x * 2, y * 2, 2, 2);
     }
     if (liquid) px(6, 9, [255, 255, 255], 0);
+  } else if (id === I.BONE_MEAL) {
+    for (let k = 0; k < 40; k++) { const a = r() * 6.283, d = r() * 5; px(Math.round(7.5 + Math.cos(a) * d), Math.round(9 + Math.sin(a) * d * 0.7), [240, 240, 232], 14); }
   } else if (id === I.SHEARS) {
     for (let k = 0; k < 7; k++) { px(4 + k, 4 + k, [220, 220, 220]); px(11 - k, 4 + k, [200, 200, 200]); }
     for (const [cx, cy] of [[4, 12], [11, 12]]) for (let a = 0; a < 12; a++) px(Math.round(cx + Math.cos(a / 2) * 2), Math.round(cy + Math.sin(a / 2) * 2), [60, 60, 60], 6);
@@ -4014,6 +4023,56 @@ function renderTrades(box, title, note) {
     box.appendChild(btn);
   }
 }
+// ── 미니맵: 주변 64×64칸을 위에서 본 모습, 위쪽이 북쪽(-z) ──
+const mapEl = document.getElementById('minimap'), mapCtx = mapEl.getContext('2d'), mapImg = mapCtx.createImageData(64, 64);
+let mapOn = false, mapT = 0, blockColor = null;
+if (settings.map) { mapOn = true; mapEl.hidden = false; }
+function toggleMap() {
+  mapOn = !mapOn; mapEl.hidden = !mapOn; mapT = 0;
+  settings.map = mapOn; saveSettings();
+}
+function computeBlockColors() {
+  // 각 블록 윗면 텍스처의 평균색
+  blockColor = [];
+  const g = atlasCanvas.getContext('2d');
+  BLOCKS.forEach((b, id) => {
+    if (!b || !b.tex) return;
+    const d = g.getImageData(b.tex[0] * TILE, 0, TILE, TILE).data;
+    let r = 0, gg = 0, bb = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 100) { r += d[i]; gg += d[i + 1]; bb += d[i + 2]; n++; }
+    blockColor[id] = n ? [r / n, gg / n, bb / n] : null;
+  });
+  blockColor[B.WATER] = [50, 90, 210]; blockColor[B.LAVA] = [230, 110, 30];
+}
+function drawMap() {
+  if (!blockColor) computeBlockColors();
+  const px = Math.floor(player.pos.x), pz = Math.floor(player.pos.z);
+  const top = dim === 'overworld' ? CH - 1 : Math.min(CH - 1, Math.floor(player.pos.y) + 3);
+  const hs = new Int16Array(64 * 65);
+  const d = mapImg.data;
+  for (let j = -1; j < 64; j++) for (let i = 0; i < 64; i++) {
+    const x = px - 32 + i, z = pz - 32 + j;
+    let y = top, id = B.AIR;
+    if (chunkReady(x, z)) for (; y > 0; y--) { id = getBlock(x, y, z); if (id !== B.AIR && blockColor[id]) break; }
+    hs[(j + 1) * 64 + i] = y;
+    if (j < 0) continue;
+    const o = (j * 64 + i) * 4, c = id === B.AIR ? [0, 0, 0] : blockColor[id];
+    const k = id === B.WATER ? 1 : y > hs[j * 64 + i] ? 1.15 : y < hs[j * 64 + i] ? 0.8 : 1; // 북쪽보다 높으면 밝게
+    d[o] = Math.min(255, c[0] * k); d[o + 1] = Math.min(255, c[1] * k); d[o + 2] = Math.min(255, c[2] * k); d[o + 3] = 255;
+  }
+  mapCtx.putImageData(mapImg, 0, 0);
+  // 길들인 늑대(초록 점)와 플레이어(방향 화살표)
+  for (const m of mobs) if (m.tamed) { mapCtx.fillStyle = '#6f6'; mapCtx.fillRect(Math.floor(m.pos.x) - px + 32, Math.floor(m.pos.z) - pz + 32, 1, 1); }
+  mapCtx.save(); mapCtx.translate(32.5, 32.5); mapCtx.rotate(-player.yaw);
+  mapCtx.fillStyle = '#fff'; mapCtx.strokeStyle = '#000'; mapCtx.lineWidth = 0.5;
+  mapCtx.beginPath(); mapCtx.moveTo(0, -3.5); mapCtx.lineTo(2.5, 2.5); mapCtx.lineTo(0, 1.2); mapCtx.lineTo(-2.5, 2.5); mapCtx.closePath(); mapCtx.fill(); mapCtx.stroke();
+  mapCtx.restore();
+}
+function mapTick(dt) {
+  if (!mapOn) return;
+  mapT -= dt;
+  if (mapT <= 0) { mapT = 0.5; drawMap(); }
+}
 // ── 물약 효과 ──
 const effectsEl = document.getElementById('effects');
 function updateEffectsHud() {
@@ -4543,6 +4602,25 @@ function useItem() {
     armor[info.armor] = s; inv[selected] = old;
     sfx.equip(); toast(info.name + '을(를) 입었습니다');
     refreshInvUI(); updateHearts(); scheduleSave();
+    return;
+  }
+  if (info.fertilizer) {
+    if (!hit) return;
+    const b = BLOCKS[hit.id];
+    if (b.crop !== undefined && b.crop < 3) {
+      setBlock(hit.x, hit.y, hit.z, B.WHEAT3); crops.delete(ckey(hit.x, hit.y, hit.z));
+    } else if (hit.id === B.GRASS && getBlock(hit.x, hit.y + 1, hit.z) === B.AIR) {
+      for (let k = 0; k < 14; k++) { // 주변 잔디 위에 풀과 꽃을 흩뿌림
+        const x = hit.x + Math.round((Math.random() - 0.5) * 6), z = hit.z + Math.round((Math.random() - 0.5) * 6);
+        for (const y of [hit.y + 1, hit.y, hit.y + 2, hit.y - 1]) {
+          if (getBlock(x, y - 1, z) === B.GRASS && getBlock(x, y, z) === B.AIR) {
+            const r2 = Math.random(); setBlock(x, y, z, r2 < 0.75 ? B.TALL_GRASS : r2 < 0.88 ? B.FLOWER_RED : B.FLOWER_YELLOW); break;
+          }
+        }
+      }
+    } else return;
+    spawnBlockParticles(B.LEAVES, hit.x, hit.y + 0.6, hit.z, 8); sfxNoise(0.15, 2500, { q: 1, vol: 0.12 });
+    swingHand(); consumeSelected();
     return;
   }
   if (info.bottle) { // 물을 보고 우클릭하면 물병
@@ -5208,7 +5286,7 @@ let playing = false, showDebug = true;
 let lastInput = matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches ? 'touch' : 'mouse';
 
 const KEY_FALLBACK = {
-  w: 'KeyW', a: 'KeyA', s: 'KeyS', d: 'KeyD', e: 'KeyE', f: 'KeyF', q: 'KeyQ', r: 'KeyR',
+  w: 'KeyW', a: 'KeyA', s: 'KeyS', d: 'KeyD', e: 'KeyE', f: 'KeyF', q: 'KeyQ', r: 'KeyR', m: 'KeyM', 'ㅡ': 'KeyM',
   'ㅈ': 'KeyW', 'ㅁ': 'KeyA', 'ㄴ': 'KeyS', 'ㅇ': 'KeyD', 'ㄷ': 'KeyE', 'ㄹ': 'KeyF', 'ㅂ': 'KeyQ', 'ㄱ': 'KeyR',
   'ㅉ': 'KeyW', 'ㄸ': 'KeyE', 'ㅃ': 'KeyQ', 'ㄲ': 'KeyR', tab: 'Tab', '[': 'BracketLeft', ']': 'BracketRight',
   ' ': 'Space', spacebar: 'Space', shift: 'ShiftLeft', escape: 'Escape', esc: 'Escape', enter: 'Enter',
@@ -5261,6 +5339,7 @@ window.addEventListener('keydown', e => {
     }
   }
   if (code === 'KeyF') toggleFly();
+  if (code === 'KeyM' && !e.repeat) toggleMap();
   if ((code === 'ShiftLeft' || code === 'ShiftRight') && player.riding) dismount();
   if (code === 'F3') showDebug = !showDebug;
 });
@@ -5443,6 +5522,7 @@ canvas.addEventListener('pointerup', endLook); canvas.addEventListener('pointerc
   hold('t-break', () => { act.left = true; act.repeat = 0; }, () => act.left = false);
   hold('t-place', () => { act.right = true; act.repeat = 0; }, () => act.right = false);
   hold('t-inv', () => openInventory(null));
+  hold('t-map', () => toggleMap());
   hold('t-menu', pause);
 })();
 
@@ -5781,6 +5861,7 @@ function frame(now) {
     growCrops(dt);
     rsTick(dt);
     effectsTick(dt);
+    mapTick(dt);
     updateBoats(dt);
   } else { highlight.visible = false; crack.visible = false; }
   updateSky(active ? dt : 0);
