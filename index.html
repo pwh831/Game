@@ -270,7 +270,7 @@ const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, WAT
   PLANK_STAIRS: 48, COBBLE_STAIRS: 52, FENCE: 56, DOOR: 57, // 계단은 방향 4개, 문은 방향 4 × 열림 2 × 위아래 2 = 16개
   LAVA: 73, OBSIDIAN: 74, GRAVEL: 75, NETHERRACK: 76, SOUL_SAND: 77, GLOWSTONE: 78, QUARTZ_ORE: 79, NETHER_BRICK: 80,
   PORTAL_X: 81, PORTAL_Z: 82, END_STONE: 83, EPF: 84, EPF_EYE: 85, END_PORTAL: 86, DRAGON_EGG: 87, QUARTZ_BLOCK: 88,
-  ENCH_TABLE: 89,
+  ENCH_TABLE: 89, MOSSY: 90, SPAWNER: 91,
   // 100~199는 아이템 번호라서 이후 블록은 200부터
   REDSTONE_ORE: 200, DUST_OFF: 201, DUST_ON: 202, LEVER_OFF: 203, LEVER_ON: 204, BUTTON_OFF: 205, BUTTON_ON: 206,
   PLATE_OFF: 207, PLATE_ON: 208, RS_TORCH: 209, LAMP_OFF: 210, LAMP_ON: 211, REDSTONE_BLOCK: 212, RS_TORCH_OFF: 213,
@@ -288,7 +288,7 @@ const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5
   QUARTZ_ORE: 58, NETHER_BRICK: 59, PORTAL: 60, END_STONE: 61, EPF_TOP: 62, EPF_SIDE: 63, EPF_EYE_TOP: 64, END_PORTAL: 65,
   DRAGON_EGG: 66, QUARTZ_BLOCK: 67, ENCH_TOP: 68, ENCH_SIDE: 69,
   REDSTONE_ORE: 70, DUST_OFF: 71, DUST_ON: 72, LEVER: 73, RS_TORCH: 74, LAMP_OFF: 75, LAMP_ON: 76, REDSTONE_BLOCK: 77,
-  PISTON_TOP: 78, STICKY_TOP: 79, PISTON_SIDE: 80, PISTON_BOTTOM: 81, PISTON_INNER: 82, BREW: 83 };
+  PISTON_TOP: 78, STICKY_TOP: 79, PISTON_SIDE: 80, PISTON_BOTTOM: 81, PISTON_INNER: 82, BREW: 83, MOSSY: 84, SPAWNER: 85 };
 const NT = 88, TILE = 16;
 
 const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_SWORD: 104, WOOD_AXE: 105, STONE_AXE: 106,
@@ -425,6 +425,8 @@ for (let d = 0; d < 6; d++) {
 BLOCKS[B.BREW_STAND] = { name: '양조대', tex: one(T.BREW), solid: false, transparent: true, ao: false, hard: 0.5, tool: 'pickaxe', emit: 1,
   boxes: [[1 / 16, 0, 1 / 16, 15 / 16, 2 / 16, 15 / 16], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16], [3 / 16, 2 / 16, 3 / 16, 6 / 16, 7 / 16, 6 / 16],
     [10 / 16, 2 / 16, 3 / 16, 13 / 16, 7 / 16, 6 / 16], [6 / 16, 2 / 16, 10 / 16, 10 / 16, 7 / 16, 13 / 16]] };
+BLOCKS[B.MOSSY] = { name: '이끼 낀 조약돌', tex: one(T.MOSSY), hard: 2, tool: 'pickaxe', needsTool: true, tier: 1 };
+BLOCKS[B.SPAWNER] = { name: '몬스터 생성기', tex: one(T.SPAWNER), hard: 5, tool: 'pickaxe', needsTool: true, tier: 1, transparent: true, ao: false, noItem: true, drop: 0 };
 BLOCKS[B.ENCH_TABLE] = { name: '마법 부여대', tex: [T.ENCH_TOP, T.OBSIDIAN, T.ENCH_SIDE], hard: 5, tool: 'pickaxe', needsTool: true, tier: 1,
   transparent: true, ao: false, boxes: [[0, 0, 0, 1, 12 / 16, 1]], emit: 7, blast: true };
 
@@ -1054,6 +1056,79 @@ function fortressesNear(x0, z0, x1, z1, margin) {
     }
   return out;
 }
+// ---------- 던전: 땅속 작은 방, 가운데 몬스터 생성기와 상자 ----------
+const DCELL = 64;
+const dungeonCache = new Map();
+function dungeonInCell(gx, gz) {
+  const k = gx + ',' + gz;
+  if (dungeonCache.has(k)) return dungeonCache.get(k);
+  let d = null;
+  if (hash2(gx, gz, 401) < 0.45) {
+    d = { x: gx * DCELL + 8 + Math.floor(hash2(gx, gz, 402) * (DCELL - 16)), z: gz * DCELL + 8 + Math.floor(hash2(gx, gz, 403) * (DCELL - 16)),
+      y: 8 + Math.floor(hash2(gx, gz, 404) * 14), blocks: null, chests: [] };
+    d.build = () => buildDungeon(d);
+    d.loot = dungeonLoot;
+  }
+  dungeonCache.set(k, d);
+  return d;
+}
+function buildDungeon(d) {
+  if (d.blocks) return d.blocks;
+  const list = [], put = (x, y, z, id) => list.push([x, y, z, id]);
+  for (let dx = -4; dx <= 4; dx++) for (let dz = -4; dz <= 4; dz++) for (let h = -1; h <= 4; h++) {
+    const edge = Math.abs(dx) === 4 || Math.abs(dz) === 4 || h === -1 || h === 4;
+    put(d.x + dx, d.y + h, d.z + dz, edge ? (hash2(d.x + dx + h * 7, d.z + dz, 405) < 0.45 ? B.MOSSY : B.COBBLE) : B.AIR);
+  }
+  put(d.x, d.y, d.z, B.SPAWNER);
+  const c1 = [d.x + (hash2(d.x, d.z, 406) < 0.5 ? 3 : -3), d.y, d.z + 1], c2 = [d.x - 1, d.y, d.z + (hash2(d.x, d.z, 407) < 0.5 ? 3 : -3)];
+  for (const c of [c1, c2]) { put(c[0], c[1], c[2], B.CHEST); d.chests.push(c); }
+  d.blocks = list;
+  return list;
+}
+function dungeonLoot(x, y, z) {
+  const r = mulberry32(Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791) ^ SEED ^ 0x6666);
+  const arr = new Array(27).fill(null);
+  const add = (id, lo, hi) => { const n = lo + (r() * (hi - lo + 1) | 0); if (n) arr[r() * 27 | 0] = { id, count: n, dur: ITEMS[id].dur }; };
+  add(I.BONE, 1, 6); add(I.STRING, 0, 4); add(I.GUNPOWDER, 0, 4); add(I.BREAD, 0, 3); add(I.IRON_INGOT, 0, 4); add(I.REDSTONE, 0, 8);
+  if (r() < 0.5) add(I.GOLD_INGOT, 1, 4);
+  if (r() < 0.25) add(I.DIAMOND, 1, 2);
+  if (r() < 0.3) add(I.BUCKET, 1, 1);
+  if (r() < 0.3) { const it = { id: I.IRON_SWORD || I.BOW, count: 1 }; it.dur = ITEMS[it.id].dur; it.ench = { sharpness: 1 + (r() * 3 | 0) }; arr[r() * 27 | 0] = it; }
+  return arr;
+}
+function dungeonsNear(x0, z0, x1, z1) {
+  const out = [];
+  for (let gx = Math.floor((x0 - 5) / DCELL); gx <= Math.floor((x1 + 5) / DCELL); gx++)
+    for (let gz = Math.floor((z0 - 5) / DCELL); gz <= Math.floor((z1 + 5) / DCELL); gz++) {
+      const d = dungeonInCell(gx, gz);
+      if (d && d.x + 5 >= x0 && d.x - 5 <= x1 && d.z + 5 >= z0 && d.z - 5 <= z1) out.push(d);
+    }
+  return out;
+}
+// 몬스터 생성기: 플레이어가 16칸 안에 있으면 몇 초마다 주변에 몬스터를 만듦 (근처에 4마리까지)
+const spawners = new Map();
+function spawnerTick(dt) {
+  if (mode !== 'survival') return;
+  for (const [k, sp] of spawners) {
+    if (!chunkReady(sp.x, sp.z)) continue;
+    if (getBlock(sp.x, sp.y, sp.z) !== B.SPAWNER) { spawners.delete(k); continue; }
+    const dx = player.pos.x - sp.x - 0.5, dy = player.pos.y - sp.y, dz = player.pos.z - sp.z - 0.5;
+    if (dx * dx + dy * dy + dz * dz > 256) continue;
+    if (Math.random() < dt * 4) spawnBlockParticles(B.LAVA, sp.x, sp.y, sp.z, 1);
+    sp.t -= dt;
+    if (sp.t > 0) continue;
+    sp.t = 5 + Math.random() * 10;
+    if (mobs.filter(m => m.type === sp.type && Math.abs(m.pos.x - sp.x) < 9 && Math.abs(m.pos.z - sp.z) < 9).length >= 4) continue;
+    for (let n = 0, tries = 0; n < 2 && tries < 8; tries++) {
+      const x = sp.x + Math.round((Math.random() - 0.5) * 6), z = sp.z + Math.round((Math.random() - 0.5) * 6);
+      for (const y of [sp.y, sp.y + 1, sp.y - 1]) {
+        if (SOLID[getBlock(x, y - 1, z)] && getBlock(x, y, z) === B.AIR && getBlock(x, y + 1, z) === B.AIR) {
+          spawnMob(sp.type, x + 0.5, y, z + 0.5); spawnBlockParticles(B.STONE, x, y, z, 6); n++; break;
+        }
+      }
+    }
+  }
+}
 // ---------- 엔드 요새: 지하 방 안의 엔드 차원문 틀 (월드마다 3곳) ----------
 const strongholdCache = { seed: null, list: [] };
 function strongholds() {
@@ -1099,6 +1174,7 @@ function structuresNear(x0, z0, x1, z1) {
   if (dim === 'nether') return fortressesNear(x0, z0, x1, z1, 60);
   if (dim !== 'overworld') return [];
   const out = villagesNear(x0, z0, x1, z1, 40);
+  out.push(...dungeonsNear(x0, z0, x1, z1));
   for (const st of strongholds()) if (st.x + 8 >= x0 && st.x - 8 <= x1 && st.z + 8 >= z0 && st.z - 8 <= z1) out.push(st);
   return out;
 }
@@ -1238,6 +1314,10 @@ function finishChunk(cx, cz, data, structs) {
     if (id >= B.WHEAT0 && id <= B.WHEAT2) {
       const lx = i % CS, lz = (i / CS | 0) % CS, ly = i / (CS * CS) | 0;
       crops.set(ckey(x0 + lx, ly, z0 + lz), [x0 + lx, ly, z0 + lz]);
+    } else if (id === B.SPAWNER) {
+      const lx = i % CS, lz = (i / CS | 0) % CS, ly = i / (CS * CS) | 0, x = x0 + lx, z = z0 + lz;
+      const h = hash2(x, z, 408);
+      spawners.set(ckey(x, ly, z), { x, y: ly, z, t: 3, type: h < 0.5 ? 'zombie' : h < 0.8 ? 'skeleton' : 'spider' });
     }
   }
 
@@ -1616,6 +1696,8 @@ atlasCanvas.width = TILE * NT; atlasCanvas.height = TILE;
   tile(T.LAMP_ON, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15 || x === 7 || y === 7) ? nz([170, 110, 50], 10) : nz([255, 220, 140], 14));
   tile(T.REDSTONE_BLOCK, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15) ? nz([140, 10, 10], 10) : nz([200, 24, 20], 18));
   const frame = (x, y) => x === 0 || y === 0 || x === 15 || y === 15;
+  tile(T.MOSSY, (x, y) => { const c = stone(); return ((x * 7 + y * 13) % 5 === 0 || (x * 3 + y * 5) % 7 === 0) ? nz([70, 110, 50], 22) : c; });
+  tile(T.SPAWNER, (x, y) => (x % 5 === 0 || y % 5 === 0 || x === 15 || y === 15) ? nz([40, 44, 60], 14) : [0, 0, 0, 0]);
   tile(T.BREW, (x, y) => (x + y) % 6 === 0 ? nz([240, 200, 80], 20) : nz([90, 84, 78], 18));
   tile(T.PISTON_TOP, (x, y) => frame(x, y) ? nz([100, 100, 100], 10) : plank(x, y));
   tile(T.STICKY_TOP, (x, y) => frame(x, y) ? nz([100, 100, 100], 10) : (x > 3 && x < 12 && y > 3 && y < 12) ? nz([110, 190, 90], 24) : plank(x, y));
@@ -3475,7 +3557,7 @@ function switchDim(nd, x, y, z) {
   tnts.length = 0;
   for (const o of orbs) scene.remove(o.mesh);
   orbs.length = 0;
-  crops.clear();
+  crops.clear(); spawners.clear();
   dim = nd; edits = editsByDim[nd];
   player.pos.set(x, y, z); player.vel.set(0, 0, 0); player.peakY = y; player.burn = 0;
   for (const hp of pets) { const w = spawnMob('wolf', x + (Math.random() - 0.5) * 2, y + 0.3, z + (Math.random() - 0.5) * 2); tameWolf(w); w.hp = hp; }
@@ -4350,7 +4432,7 @@ function breakBlockAt(hit) {
   if (it && it.tool) wearSelected(it.tool === 'sword' ? 2 : 1);
 }
 // 경험치: 몹, 광석, 굽기로 얻음. 레벨마다 필요한 양이 늘어남
-const ORE_XP = { [B.COAL_ORE]: 1, [B.DIAMOND_ORE]: 5, [B.QUARTZ_ORE]: 3, [B.REDSTONE_ORE]: 2 };
+const ORE_XP = { [B.COAL_ORE]: 1, [B.DIAMOND_ORE]: 5, [B.QUARTZ_ORE]: 3, [B.REDSTONE_ORE]: 2, [B.SPAWNER]: 20 };
 const xpNeed = L => L < 16 ? 2 * L + 7 : L < 31 ? 5 * L - 38 : 9 * L - 158;
 function addXp(n) {
   if (mode !== 'survival') return;
@@ -5583,7 +5665,7 @@ function newWorld(newMode) {
   for (const m of Object.values(editsByDim)) m.clear();
   dim = 'overworld'; edits = editsByDim.overworld;
   endState.dragonDead = false; endState.crystalsGone.clear();
-  villageCache.clear(); fortressCache.clear(); strongholdCache.seed = null;
+  villageCache.clear(); fortressCache.clear(); dungeonCache.clear(); spawners.clear(); strongholdCache.seed = null;
   applyDimVisuals();
   for (const c of chunks.values()) disposeMeshes(c);
   chunks.clear(); lastCenter = null;
@@ -5862,6 +5944,7 @@ function frame(now) {
     rsTick(dt);
     effectsTick(dt);
     mapTick(dt);
+    spawnerTick(dt);
     updateBoats(dt);
   } else { highlight.visible = false; crack.visible = false; }
   updateSky(active ? dt : 0);
