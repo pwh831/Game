@@ -95,7 +95,8 @@
   .invright { width: 300px; max-width: 100%; flex: none; display: flex; flex-direction: column; }
   #craft-note { margin: 0 0 8px; font-size: 11px; color: var(--ink-dim); line-height: 1.4; }
   #recipes { display: flex; flex-direction: column; gap: 4px; max-height: 330px; overflow-y: auto; padding-right: 4px; }
-  #recipes.grid { display: grid; gap: 3px; padding-right: 0; }
+  #recipes.grid { display: grid; gap: 3px; padding-right: 0; grid-template-columns: repeat(9, minmax(0, 1fr)); }
+  #recipes.grid .slot { width: auto; height: auto; aspect-ratio: 1; } /* 오른쪽 칸(300px)에 상자 9열이 다 들어가게 */
   #recipes.palette { display: grid; }
   .recipe { display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: center; text-align: left; font: inherit; color: var(--ink);
     background: #2a2e24; border: 2px solid var(--slot-edge); padding: 4px 6px; cursor: pointer; box-shadow: none; }
@@ -291,7 +292,7 @@ const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, WAT
   REDSTONE_ORE: 200, DUST_OFF: 201, DUST_ON: 202, LEVER_OFF: 203, LEVER_ON: 204, BUTTON_OFF: 205, BUTTON_ON: 206,
   PLATE_OFF: 207, PLATE_ON: 208, RS_TORCH: 209, LAMP_OFF: 210, LAMP_ON: 211, REDSTONE_BLOCK: 212, RS_TORCH_OFF: 213,
   // 피스톤: 방향 d(0~5, 면 순서 -x +x -y +y -z +z)마다 한 칸씩
-  PISTON: 214, STICKY: 220, PISTON_EXT: 226, STICKY_EXT: 232, PHEAD: 238, SHEAD: 244, BREW_STAND: 250 };
+  PISTON: 214, STICKY: 220, PISTON_EXT: 226, STICKY_EXT: 232, PHEAD: 238, SHEAD: 244, BREW_STAND: 250, ENDER_CHEST: 251 };
 const isBlk = id => id < 100 || id >= 200;
 const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7,
   WATER: 8, PLANKS: 9, COBBLE: 10, GLASS: 11, BRICK: 12, SNOW: 13, SNOW_SIDE: 14, BEDROCK: 15, TABLE_TOP: 16, TABLE_SIDE: 17,
@@ -304,8 +305,8 @@ const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5
   QUARTZ_ORE: 58, NETHER_BRICK: 59, PORTAL: 60, END_STONE: 61, EPF_TOP: 62, EPF_SIDE: 63, EPF_EYE_TOP: 64, END_PORTAL: 65,
   DRAGON_EGG: 66, QUARTZ_BLOCK: 67, ENCH_TOP: 68, ENCH_SIDE: 69,
   REDSTONE_ORE: 70, DUST_OFF: 71, DUST_ON: 72, LEVER: 73, RS_TORCH: 74, LAMP_OFF: 75, LAMP_ON: 76, REDSTONE_BLOCK: 77,
-  PISTON_TOP: 78, STICKY_TOP: 79, PISTON_SIDE: 80, PISTON_BOTTOM: 81, PISTON_INNER: 82, BREW: 83, MOSSY: 84, SPAWNER: 85, CWOOL: 86 };
-const NT = 96, TILE = 16;
+  PISTON_TOP: 78, STICKY_TOP: 79, PISTON_SIDE: 80, PISTON_BOTTOM: 81, PISTON_INNER: 82, BREW: 83, MOSSY: 84, SPAWNER: 85, CWOOL: 86, ECHEST_TOP: 94, ECHEST_FRONT: 95 };
+const NT = 104, TILE = 16;
 
 const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_SWORD: 104, WOOD_AXE: 105, STONE_AXE: 106,
   WOOD_SHOVEL: 107, STONE_SHOVEL: 108, APPLE: 109, PORK: 110, FLESH: 111,
@@ -449,6 +450,7 @@ const WOOL_COLORS = [
   ['검은', [30, 28, 32], [[I.COAL, 1]]], ['분홍', [230, 140, 168], [[B.FLOWER_RED, 1], [I.BONE_MEAL, 1]]],
 ];
 WOOL_COLORS.forEach(([name], k) => { BLOCKS[B.CWOOL + k] = { name: name + ' 양털', tex: one(T.CWOOL + k), hard: 0.8, snd: 'snow' }; });
+BLOCKS[B.ENDER_CHEST] = { name: '엔더 상자', tex: [T.ECHEST_TOP, T.ECHEST_TOP, T.ECHEST_FRONT], hard: 22, tool: 'pickaxe', needsTool: true, tier: 1, emit: 7, drop: B.OBSIDIAN };
 BLOCKS[B.MOSSY] = { name: '이끼 낀 조약돌', tex: one(T.MOSSY), hard: 2, tool: 'pickaxe', needsTool: true, tier: 1 };
 BLOCKS[B.SPAWNER] = { name: '몬스터 생성기', tex: one(T.SPAWNER), hard: 5, tool: 'pickaxe', needsTool: true, tier: 1, transparent: true, ao: false, noItem: true, drop: 0 };
 BLOCKS[B.ENCH_TABLE] = { name: '마법 부여대', tex: [T.ENCH_TOP, T.OBSIDIAN, T.ENCH_SIDE], hard: 5, tool: 'pickaxe', needsTool: true, tier: 1,
@@ -644,6 +646,7 @@ RECIPES.push(
   { out: [I.COMPASS, 1], in: [[I.IRON_INGOT, 4], [I.REDSTONE, 1]], table: true },
   { out: [I.SADDLE, 1], in: [[I.LEATHER, 5], [I.IRON_INGOT, 1]], table: true },
   { out: [I.SHIELD, 1], in: [[B.PLANKS, 6], [I.IRON_INGOT, 1]], table: true },
+  { out: [B.ENDER_CHEST, 1], in: [[B.OBSIDIAN, 8], [I.EYE_OF_ENDER, 1]], table: true },
   { out: [I.CLOCK, 1], in: [[I.GOLD_INGOT, 4], [I.REDSTONE, 1]], table: true },
   ...WOOL_COLORS.map(([, , ing], k) => ({ out: [B.CWOOL + k, ing.length], in: [[B.WOOL, ing.length], ...ing] })),
   { out: [B.BREW_STAND, 1], in: [[I.BLAZE_ROD, 1], [B.COBBLE, 3]], table: true },
@@ -674,7 +677,7 @@ const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [B.BIRCH_LOG, 1.5], [I
 const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.CHEST, B.BED, B.WOOL, B.TNT, B.BEDROCK,
   B.SANDSTONE, B.BIRCH_LOG, B.STONE_BRICK, B.PLANK_SLAB, B.COBBLE_SLAB, B.STONE_SLAB, B.PLANK_STAIRS, B.COBBLE_STAIRS, B.FENCE, B.ICE, B.CACTUS, B.FLOWER_RED, B.FLOWER_YELLOW,
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
-  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, I.GOLDEN_APPLE, I.COMPASS, I.CLOCK, I.SADDLE, I.SHIELD, I.SLIMEBALL, ...WOOL_COLORS.map((_, k) => B.CWOOL + k), I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
+  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, I.GOLDEN_APPLE, I.COMPASS, I.CLOCK, I.SADDLE, I.SHIELD, I.SLIMEBALL, B.ENDER_CHEST, ...WOOL_COLORS.map((_, k) => B.CWOOL + k), I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
   I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD,
   B.PISTON + 3, B.STICKY + 3, B.REDSTONE_ORE, B.LEVER_OFF, B.BUTTON_OFF, B.PLATE_OFF, B.RS_TORCH, B.LAMP_OFF, B.REDSTONE_BLOCK, I.REDSTONE,
@@ -710,6 +713,8 @@ const ser = s => s ? [s.id, s.count, s.dur == null ? null : s.dur, s.ench || nul
 const armor = [null, null, null, null]; // 투구, 흉갑, 레깅스, 부츠
 if (save && save.armor) save.armor.forEach((s, i) => { armor[i] = deser(s); });
 const chests = new Map(); // "x,y,z" -> 27칸
+const enderInv = new Array(27).fill(null); // 모든 엔더 상자가 함께 쓰는 칸 (차원 상관없이)
+if (save && save.ender) save.ender.forEach((s, i) => { enderInv[i] = deser(s); });
 if (save && save.chests) for (const k in save.chests) chests.set(k, save.chests[k].map(deser));
 let spawnPoint = save && save.spawn ? save.spawn : null; // 침대 위치
 const crops = new Map(); // 자라는 중인 밀: "x,y,z" -> [x, y, z]
@@ -731,6 +736,7 @@ function writeSave() {
     inv: inv.map(ser), armor: armor.map(ser), spawn: spawnPoint, chests: {},
     boats: dim === 'overworld' ? boats.map(b => [+b.pos.x.toFixed(2), +b.pos.y.toFixed(2), +b.pos.z.toFixed(2), +b.yaw.toFixed(2)]) : (owBoats || []) };
   for (const [k, arr] of chests) obj.chests[k] = arr.map(ser);
+  obj.ender = enderInv.map(ser);
   const dump = m => { const o = {}; for (const [k, v] of m) if (v.size) o[k] = [...v]; return o; };
   obj.edits = dump(editsByDim.overworld); obj.editsN = dump(editsByDim.nether); obj.editsE = dump(editsByDim.end);
   obj.horses = dim === 'overworld' ? mobs.filter(m => m.type === 'horse' && m.tamed).map(horseData) : (owHorses || []);
@@ -1737,6 +1743,12 @@ atlasCanvas.width = TILE * NT; atlasCanvas.height = TILE;
   tile(T.REDSTONE_BLOCK, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15) ? nz([140, 10, 10], 10) : nz([200, 24, 20], 18));
   const frame = (x, y) => x === 0 || y === 0 || x === 15 || y === 15;
   WOOL_COLORS.forEach(([, c], k) => tile(T.CWOOL + k, (x, y) => nz((x * 7 + y * 3) % 5 === 0 ? c.map(v => v * 0.85) : c, 10)));
+  tile(T.ECHEST_TOP, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15) ? nz([20, 30, 30], 8) : nz([28, 44, 44], 14));
+  tile(T.ECHEST_FRONT, (x, y) => {
+    if (x === 0 || y === 0 || x === 15 || y === 15 || y === 6) return nz([20, 30, 30], 8);
+    if (x >= 6 && x <= 9 && y >= 4 && y <= 8) return (x === 7 || x === 8) && (y === 6) ? [20, 60, 40] : nz([70, 200, 150], 16); // 엔더의 눈 잠금쇠
+    return nz([28, 44, 44], 14);
+  });
   tile(T.MOSSY, (x, y) => { const c = stone(); return ((x * 7 + y * 13) % 5 === 0 || (x * 3 + y * 5) % 7 === 0) ? nz([70, 110, 50], 22) : c; });
   tile(T.SPAWNER, (x, y) => (x % 5 === 0 || y % 5 === 0 || x === 15 || y === 15) ? nz([40, 44, 60], 14) : [0, 0, 0, 0]);
   tile(T.BREW, (x, y) => (x + y) % 6 === 0 ? nz([240, 200, 80], 20) : nz([90, 84, 78], 18));
@@ -4650,7 +4662,7 @@ function rsProcess(seeds) {
   }
 }
 // 피스톤이 밀 수 없는 블록
-const IMMOVABLE = new Set([B.BEDROCK, B.OBSIDIAN, B.CHEST, B.FURNACE, B.ENCH_TABLE, B.BED, B.PORTAL_X, B.PORTAL_Z, B.EPF, B.EPF_EYE, B.END_PORTAL, B.TABLE, B.LAVA]);
+const IMMOVABLE = new Set([B.BEDROCK, B.OBSIDIAN, B.CHEST, B.ENDER_CHEST, B.FURNACE, B.ENCH_TABLE, B.BED, B.PORTAL_X, B.PORTAL_Z, B.EPF, B.EPF_EYE, B.END_PORTAL, B.TABLE, B.LAVA]);
 const movable = id => !IMMOVABLE.has(id) && !BLOCKS[id].door && !(BLOCKS[id].piston && BLOCKS[id].piston.ext) && !BLOCKS[id].head && BLOCKS[id].hard !== Infinity;
 const breaksOnPush = id => id === B.WATER || BLOCKS[id].cross || BLOCKS[id].torch || (BLOCKS[id].needsGround && !SOLID[id]);
 function pushEntities(cells, dx, dy, dz) {
@@ -5035,6 +5047,7 @@ function useItem() {
   if (hit && hit.id === B.ENCH_TABLE && !sneaking) { openInventory('enchant'); return; }
   if (hit && hit.id === B.BREW_STAND && !sneaking) { openInventory('brew'); return; }
   if (hit && hit.id === B.CHEST && !sneaking) { openChestAt(hit.x, hit.y, hit.z); return; }
+  if (hit && hit.id === B.ENDER_CHEST && !sneaking) { openChest = enderInv; sfx.chest(); sfx.portal(); openInventory('chest'); return; }
   if (hit && hit.id === B.BED && !sneaking) { sleepAt(hit.x, hit.y, hit.z); return; }
   if (hit && BLOCKS[hit.id].door && !sneaking) { toggleDoor(hit.x, hit.y, hit.z); return; }
   if (hit && (hit.id === B.LEVER_OFF || hit.id === B.LEVER_ON) && !sneaking) {
@@ -5631,8 +5644,8 @@ function renderEnchant(box, title, note) {
   }
 }
 function renderChest(box, title, note) {
-  title.textContent = '상자';
-  note.textContent = 'Shift+클릭으로 인벤토리와 상자 사이를 바로 옮깁니다.';
+  title.textContent = openChest === enderInv ? '엔더 상자' : '상자';
+  note.textContent = (openChest === enderInv ? '어느 엔더 상자에서나(네더·엔드 포함) 같은 칸이 열립니다. ' : '') + 'Shift+클릭으로 인벤토리와 상자 사이를 바로 옮깁니다.';
   box.className = 'grid';
   openChest.forEach((st, i) => {
     const el = makeSlotEl(); paintSlot(el, st);
@@ -6096,7 +6109,7 @@ function newWorld(newMode) {
   chunks.clear(); lastCenter = null;
   while (mobs.length) removeMob(mobs[0]);
   while (drops.length) removeDrop(0);
-  inv.fill(null); fuel = 0; armor.fill(null); chests.clear(); spawnPoint = null;
+  inv.fill(null); fuel = 0; armor.fill(null); chests.clear(); spawnPoint = null; enderInv.fill(null);
   achDone.clear(); renderAchList();
   for (const a of arrows) scene.remove(a.mesh);
   arrows.length = 0;
