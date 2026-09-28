@@ -271,7 +271,7 @@ const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, WAT
   PLANK_STAIRS: 48, COBBLE_STAIRS: 52, FENCE: 56, DOOR: 57, // 계단은 방향 4개, 문은 방향 4 × 열림 2 × 위아래 2 = 16개
   LAVA: 73, OBSIDIAN: 74, GRAVEL: 75, NETHERRACK: 76, SOUL_SAND: 77, GLOWSTONE: 78, QUARTZ_ORE: 79, NETHER_BRICK: 80,
   PORTAL_X: 81, PORTAL_Z: 82, END_STONE: 83, EPF: 84, EPF_EYE: 85, END_PORTAL: 86, DRAGON_EGG: 87, QUARTZ_BLOCK: 88,
-  ENCH_TABLE: 89, MOSSY: 90, SPAWNER: 91,
+  ENCH_TABLE: 89, MOSSY: 90, SPAWNER: 91, CWOOL: 92, // 92~99 색 양털 8가지
   // 100~199는 아이템 번호라서 이후 블록은 200부터
   REDSTONE_ORE: 200, DUST_OFF: 201, DUST_ON: 202, LEVER_OFF: 203, LEVER_ON: 204, BUTTON_OFF: 205, BUTTON_ON: 206,
   PLATE_OFF: 207, PLATE_ON: 208, RS_TORCH: 209, LAMP_OFF: 210, LAMP_ON: 211, REDSTONE_BLOCK: 212, RS_TORCH_OFF: 213,
@@ -289,8 +289,8 @@ const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5
   QUARTZ_ORE: 58, NETHER_BRICK: 59, PORTAL: 60, END_STONE: 61, EPF_TOP: 62, EPF_SIDE: 63, EPF_EYE_TOP: 64, END_PORTAL: 65,
   DRAGON_EGG: 66, QUARTZ_BLOCK: 67, ENCH_TOP: 68, ENCH_SIDE: 69,
   REDSTONE_ORE: 70, DUST_OFF: 71, DUST_ON: 72, LEVER: 73, RS_TORCH: 74, LAMP_OFF: 75, LAMP_ON: 76, REDSTONE_BLOCK: 77,
-  PISTON_TOP: 78, STICKY_TOP: 79, PISTON_SIDE: 80, PISTON_BOTTOM: 81, PISTON_INNER: 82, BREW: 83, MOSSY: 84, SPAWNER: 85 };
-const NT = 88, TILE = 16;
+  PISTON_TOP: 78, STICKY_TOP: 79, PISTON_SIDE: 80, PISTON_BOTTOM: 81, PISTON_INNER: 82, BREW: 83, MOSSY: 84, SPAWNER: 85, CWOOL: 86 };
+const NT = 96, TILE = 16;
 
 const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_SWORD: 104, WOOD_AXE: 105, STONE_AXE: 106,
   WOOD_SHOVEL: 107, STONE_SHOVEL: 108, APPLE: 109, PORK: 110, FLESH: 111,
@@ -426,6 +426,14 @@ for (let d = 0; d < 6; d++) {
 BLOCKS[B.BREW_STAND] = { name: '양조대', tex: one(T.BREW), solid: false, transparent: true, ao: false, hard: 0.5, tool: 'pickaxe', emit: 1,
   boxes: [[1 / 16, 0, 1 / 16, 15 / 16, 2 / 16, 15 / 16], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16], [3 / 16, 2 / 16, 3 / 16, 6 / 16, 7 / 16, 6 / 16],
     [10 / 16, 2 / 16, 3 / 16, 13 / 16, 7 / 16, 6 / 16], [6 / 16, 2 / 16, 10 / 16, 10 / 16, 7 / 16, 13 / 16]] };
+// 색 양털: [이름, 색, 재료]
+const WOOL_COLORS = [
+  ['빨간', [180, 40, 36], [[B.FLOWER_RED, 1]]], ['주황', [224, 120, 40], [[B.FLOWER_RED, 1], [B.FLOWER_YELLOW, 1]]],
+  ['노란', [226, 200, 50], [[B.FLOWER_YELLOW, 1]]], ['초록', [80, 120, 40], [[B.CACTUS, 1]]],
+  ['파란', [52, 70, 170], [[B.ICE, 1]]], ['보라', [124, 56, 170], [[B.FLOWER_RED, 1], [B.ICE, 1]]],
+  ['검은', [30, 28, 32], [[I.COAL, 1]]], ['분홍', [230, 140, 168], [[B.FLOWER_RED, 1], [I.BONE_MEAL, 1]]],
+];
+WOOL_COLORS.forEach(([name], k) => { BLOCKS[B.CWOOL + k] = { name: name + ' 양털', tex: one(T.CWOOL + k), hard: 0.8, snd: 'snow' }; });
 BLOCKS[B.MOSSY] = { name: '이끼 낀 조약돌', tex: one(T.MOSSY), hard: 2, tool: 'pickaxe', needsTool: true, tier: 1 };
 BLOCKS[B.SPAWNER] = { name: '몬스터 생성기', tex: one(T.SPAWNER), hard: 5, tool: 'pickaxe', needsTool: true, tier: 1, transparent: true, ao: false, noItem: true, drop: 0 };
 BLOCKS[B.ENCH_TABLE] = { name: '마법 부여대', tex: [T.ENCH_TOP, T.OBSIDIAN, T.ENCH_SIDE], hard: 5, tool: 'pickaxe', needsTool: true, tier: 1,
@@ -610,6 +618,7 @@ RECIPES.push(
   { out: [I.BOTTLE, 3], in: [[B.GLASS, 3]] },
   { out: [I.SHEARS, 1], in: [[I.IRON_INGOT, 2]] },
   { out: [I.BONE_MEAL, 3], in: [[I.BONE, 1]] },
+  ...WOOL_COLORS.map(([, , ing], k) => ({ out: [B.CWOOL + k, ing.length], in: [[B.WOOL, ing.length], ...ing] })),
   { out: [B.BREW_STAND, 1], in: [[I.BLAZE_ROD, 1], [B.COBBLE, 3]], table: true },
   ...POTIONS.map(([id, , , , ing]) => ({ out: [id, 1], in: [[I.WATER_BOTTLE, 1], [ing, 1]], brew: true })),
   { out: [B.WOOL, 1], in: [[I.STRING, 4]] },
@@ -638,7 +647,7 @@ const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [B.BIRCH_LOG, 1.5], [I
 const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.CHEST, B.BED, B.WOOL, B.TNT, B.BEDROCK,
   B.SANDSTONE, B.BIRCH_LOG, B.STONE_BRICK, B.PLANK_SLAB, B.COBBLE_SLAB, B.STONE_SLAB, B.PLANK_STAIRS, B.COBBLE_STAIRS, B.FENCE, B.ICE, B.CACTUS, B.FLOWER_RED, B.FLOWER_YELLOW,
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
-  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
+  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, ...WOOL_COLORS.map((_, k) => B.CWOOL + k), I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
   I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD,
   B.PISTON + 3, B.STICKY + 3, B.REDSTONE_ORE, B.LEVER_OFF, B.BUTTON_OFF, B.PLATE_OFF, B.RS_TORCH, B.LAMP_OFF, B.REDSTONE_BLOCK, I.REDSTONE,
@@ -1697,6 +1706,7 @@ atlasCanvas.width = TILE * NT; atlasCanvas.height = TILE;
   tile(T.LAMP_ON, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15 || x === 7 || y === 7) ? nz([170, 110, 50], 10) : nz([255, 220, 140], 14));
   tile(T.REDSTONE_BLOCK, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15) ? nz([140, 10, 10], 10) : nz([200, 24, 20], 18));
   const frame = (x, y) => x === 0 || y === 0 || x === 15 || y === 15;
+  WOOL_COLORS.forEach(([, c], k) => tile(T.CWOOL + k, (x, y) => nz((x * 7 + y * 3) % 5 === 0 ? c.map(v => v * 0.85) : c, 10)));
   tile(T.MOSSY, (x, y) => { const c = stone(); return ((x * 7 + y * 13) % 5 === 0 || (x * 3 + y * 5) % 7 === 0) ? nz([70, 110, 50], 22) : c; });
   tile(T.SPAWNER, (x, y) => (x % 5 === 0 || y % 5 === 0 || x === 15 || y === 15) ? nz([40, 44, 60], 14) : [0, 0, 0, 0]);
   tile(T.BREW, (x, y) => (x + y) % 6 === 0 ? nz([240, 200, 80], 20) : nz([90, 84, 78], 18));
