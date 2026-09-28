@@ -71,6 +71,10 @@
   #armorslots { display: flex; gap: 3px; }
   #hearts i { width: 18px; height: 18px; background-size: 100% 100%; image-rendering: pixelated; }
   #hotbar { display: flex; gap: 3px; padding: 4px; background: var(--panel); border: 2px solid var(--panel-edge); pointer-events: auto; }
+  #gadget { position: fixed; left: 50%; top: calc(50% + 28px); transform: translateX(-50%); font-size: 13px; padding: 3px 10px; background: rgba(0,0,0,.45);
+    border-radius: 3px; pointer-events: none; display: flex; gap: 8px; align-items: center; text-shadow: 1px 1px 0 var(--shadow); white-space: nowrap; }
+  #gadget[hidden] { display: none; }
+  #gadget-arrow { display: inline-block; color: #ff6a5a; transition: transform .15s; }
   #blockname { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px));
     font-size: 15px; text-shadow: 1px 1px 0 var(--shadow); pointer-events: none; transition: opacity .4s; white-space: nowrap; }
   .slot { position: relative; width: var(--s); height: var(--s); background: var(--slot); border: 2px solid var(--slot-edge);
@@ -162,7 +166,7 @@
 <div id="steer-dot" hidden></div>
 <div id="info"></div>
 <div id="toast"></div><div id="achtoast"><small>도전 과제 달성!</small><b></b></div>
-<div id="blockname"></div>
+<div id="blockname"></div><div id="gadget" hidden><span id="gadget-arrow">▲</span><span id="gadget-text"></span></div>
 <div id="sleep"></div>
 <div id="bossbar" hidden><b>엔더 드래곤</b><div class="bb-track"><i id="bb-fill"></i></div></div>
 <div id="rightcol"><canvas id="minimap" width="64" height="64" hidden></canvas><div id="effects"></div></div><div id="hud"><div id="armorbar" hidden></div><div class="barrow"><div id="hearts"></div><div id="hunger"></div></div><div id="xpbar"><i id="xpfill"></i><span id="xplevel"></span></div><div id="hotbar"></div></div>
@@ -312,7 +316,7 @@ const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_
   BLAZE_POWDER: 163, ENDER_PEARL: 164, EYE_OF_ENDER: 165,
   GHAST_TEAR: 166, NETHER_BRICK_ITEM: 167, REDSTONE: 168,
   STRING: 169, FISHING_ROD: 170, RAW_FISH: 171, COOKED_FISH: 172,
-  BOTTLE: 173, WATER_BOTTLE: 174, P_HEAL: 175, P_REGEN: 176, P_SPEED: 177, P_FIRE: 178, P_NIGHT: 179, P_STRENGTH: 180, P_JUMP: 181, SHEARS: 182, BONE_MEAL: 183 };
+  BOTTLE: 173, WATER_BOTTLE: 174, P_HEAL: 175, P_REGEN: 176, P_SPEED: 177, P_FIRE: 178, P_NIGHT: 179, P_STRENGTH: 180, P_JUMP: 181, SHEARS: 182, BONE_MEAL: 183, GOLDEN_APPLE: 184, COMPASS: 185, CLOCK: 186 };
 // 갑옷: 132부터 [가죽, 철, 다이아몬드] × [투구, 흉갑, 레깅스, 부츠]
 const ARMOR_SET = [['leather', '가죽', 5, [1, 3, 2, 1]], ['iron', '철', 15, [2, 6, 5, 2]], ['diamond', '다이아몬드', 33, [3, 8, 6, 3]]];
 const ARMOR_PART = ['투구', '흉갑', '레깅스', '부츠'], ARMOR_BASE_DUR = [11, 16, 15, 13], ARMOR_COST = [5, 8, 7, 4];
@@ -553,6 +557,9 @@ ITEMS[I.GHAST_TEAR] = { name: '가스트 눈물', stack: 64 };
 ITEMS[I.NETHER_BRICK_ITEM] = { name: '네더 벽돌 조각', stack: 64 };
 ITEMS[I.REDSTONE] = { name: '레드스톤 가루', stack: 64, placeAs: B.DUST_OFF };
 ITEMS[I.STRING] = { name: '실', stack: 64 };
+ITEMS[I.GOLDEN_APPLE] = { name: '황금 사과', stack: 64, food: 4, sat: 9.6, regen: 10 };
+ITEMS[I.COMPASS] = { name: '나침반', stack: 1, gadget: 'compass' };
+ITEMS[I.CLOCK] = { name: '시계', stack: 1, gadget: 'clock' };
 ITEMS[I.BONE_MEAL] = { name: '뼛가루', stack: 64, fertilizer: true };
 ITEMS[I.SHEARS] = { name: '가위', stack: 1, dur: 238, shears: true };
 ITEMS[I.BOTTLE] = { name: '유리병', stack: 16, bottle: true };
@@ -626,6 +633,9 @@ RECIPES.push(
   { out: [I.BOTTLE, 3], in: [[B.GLASS, 3]] },
   { out: [I.SHEARS, 1], in: [[I.IRON_INGOT, 2]] },
   { out: [I.BONE_MEAL, 3], in: [[I.BONE, 1]] },
+  { out: [I.GOLDEN_APPLE, 1], in: [[I.APPLE, 1], [I.GOLD_INGOT, 8]], table: true },
+  { out: [I.COMPASS, 1], in: [[I.IRON_INGOT, 4], [I.REDSTONE, 1]], table: true },
+  { out: [I.CLOCK, 1], in: [[I.GOLD_INGOT, 4], [I.REDSTONE, 1]], table: true },
   ...WOOL_COLORS.map(([, , ing], k) => ({ out: [B.CWOOL + k, ing.length], in: [[B.WOOL, ing.length], ...ing] })),
   { out: [B.BREW_STAND, 1], in: [[I.BLAZE_ROD, 1], [B.COBBLE, 3]], table: true },
   ...POTIONS.map(([id, , , , ing]) => ({ out: [id, 1], in: [[I.WATER_BOTTLE, 1], [ing, 1]], brew: true })),
@@ -655,7 +665,7 @@ const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [B.BIRCH_LOG, 1.5], [I
 const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.CHEST, B.BED, B.WOOL, B.TNT, B.BEDROCK,
   B.SANDSTONE, B.BIRCH_LOG, B.STONE_BRICK, B.PLANK_SLAB, B.COBBLE_SLAB, B.STONE_SLAB, B.PLANK_STAIRS, B.COBBLE_STAIRS, B.FENCE, B.ICE, B.CACTUS, B.FLOWER_RED, B.FLOWER_YELLOW,
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
-  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, ...WOOL_COLORS.map((_, k) => B.CWOOL + k), I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
+  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, I.GOLDEN_APPLE, I.COMPASS, I.CLOCK, ...WOOL_COLORS.map((_, k) => B.CWOOL + k), I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
   I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD,
   B.PISTON + 3, B.STICKY + 3, B.REDSTONE_ORE, B.LEVER_OFF, B.BUTTON_OFF, B.PLATE_OFF, B.RS_TORCH, B.LAMP_OFF, B.REDSTONE_BLOCK, I.REDSTONE,
@@ -1889,6 +1899,17 @@ function drawItemIcon(g, id) {
       else g.fillStyle = 'rgba(210,230,245,.35)', g.fillRect(x * 2, y * 2, 2, 2);
     }
     if (liquid) px(6, 9, [255, 255, 255], 0);
+  } else if (id === I.GOLDEN_APPLE) {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { if (Math.hypot(x - 7.5, y - 9) < 5.6) px(x, y, x < 6 && y < 8 ? [255, 250, 180] : [236, 196, 50], 14); }
+    px(8, 2, [110, 80, 40]); px(8, 3, [110, 80, 40]); px(9, 2, [80, 160, 60]); px(10, 2, [80, 160, 60]);
+  } else if (id === I.COMPASS || id === I.CLOCK) {
+    const rim = id === I.COMPASS ? [140, 140, 150] : [220, 180, 50];
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const d = Math.hypot(x - 7.5, y - 7.5);
+      if (d < 7) px(x, y, d > 5.6 ? rim : id === I.COMPASS ? [200, 200, 190] : (y < 8 ? [110, 170, 230] : [40, 40, 90]), 8);
+    }
+    if (id === I.COMPASS) { for (let k = 0; k < 4; k++) { px(7, 3 + k, [220, 40, 40], 0); px(8, 8 + k, [60, 60, 60], 0); } }
+    else { px(7, 4, [255, 230, 90], 0); px(8, 4, [255, 230, 90], 0); px(7, 11, [240, 240, 255], 0); }
   } else if (id === I.BONE_MEAL) {
     for (let k = 0; k < 40; k++) { const a = r() * 6.283, d = r() * 5; px(Math.round(7.5 + Math.cos(a) * d), Math.round(9 + Math.sin(a) * d * 0.7), [240, 240, 232], 14); }
   } else if (id === I.SHEARS) {
@@ -4174,6 +4195,32 @@ function drawMap() {
   mapCtx.beginPath(); mapCtx.moveTo(0, -3.5); mapCtx.lineTo(2.5, 2.5); mapCtx.lineTo(0, 1.2); mapCtx.lineTo(-2.5, 2.5); mapCtx.closePath(); mapCtx.fill(); mapCtx.stroke();
   mapCtx.restore();
 }
+// 나침반(부활 지점 방향과 거리)과 시계(게임 속 시각)를 들고 있으면 화면 가운데 아래에 표시
+const gadgetEl = document.getElementById('gadget'), gadgetArrow = document.getElementById('gadget-arrow'), gadgetText = document.getElementById('gadget-text');
+let gadgetT = 0;
+function gadgetTick(dt) {
+  const s = heldItem(), g = s && ITEMS[s.id].gadget;
+  gadgetEl.hidden = !g || !!ui;
+  if (!g) return;
+  gadgetT -= dt;
+  if (gadgetT > 0) return;
+  gadgetT = 0.1;
+  if (g === 'compass') {
+    gadgetArrow.hidden = false;
+    if (dim !== 'overworld') { gadgetArrow.style.transform = `rotate(${Math.random() * 360}deg)`; gadgetText.textContent = '방향을 알 수 없음'; return; }
+    const t = spawnPoint ? [spawnPoint[0] + 0.5, spawnPoint[2] + 0.5] : [0.5, 0.5];
+    const dx = t[0] - player.pos.x, dz = t[1] - player.pos.z;
+    const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+    const ang = Math.atan2(fx * dz - fz * dx, fx * dx + fz * dz); // 앞 방향 기준 오른쪽이 +
+    gadgetArrow.style.transform = `rotate(${ang}rad)`;
+    gadgetText.textContent = `${spawnPoint ? '침대' : '처음 장소'} ${Math.round(Math.hypot(dx, dz))}m`;
+  } else {
+    gadgetArrow.hidden = true;
+    if (dim !== 'overworld') { gadgetText.textContent = '시계가 제멋대로 돕니다'; return; }
+    const hours = (worldTime / DAY_LEN * 24 + 6) % 24, h = Math.floor(hours), m = Math.floor((hours - h) * 60);
+    gadgetText.textContent = `${dayLight < 0.45 ? '🌙 밤' : '☀ 낮'} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+}
 function mapTick(dt) {
   if (!mapOn) return;
   mapT -= dt;
@@ -4825,6 +4872,7 @@ function useItem() {
       player.food = Math.min(20, player.food + info.food);
       player.sat = Math.min(player.food, player.sat + (info.sat || 0));
       consumeSelected(); updateHearts(); toast(info.name + '을(를) 먹었습니다'); sfx.eat();
+      if (info.regen) { player.fx.regen = Math.max(player.fx.regen || 0, info.regen); updateEffectsHud(); }
     } else if (mode === 'survival') toast('배가 부릅니다');
     return;
   }
@@ -6043,6 +6091,7 @@ function frame(now) {
     rsTick(dt);
     effectsTick(dt);
     mapTick(dt);
+    gadgetTick(dt);
     musicTick(dt);
     spawnerTick(dt);
     updateBoats(dt);
