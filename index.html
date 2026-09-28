@@ -216,6 +216,9 @@
       <kbd>Shift + 우클릭</kbd><span>작업대·상자 등에 블록 붙여 놓기</span>
       <kbd>활 들고 우클릭 유지</kbd><span>당겼다가 놓으면 발사 (R 키도 가능)</span>
       <kbd>우클릭 (문·주민·보트)</kbd><span>문 열고 닫기 / 주민과 거래 / 보트 타기 (Shift로 내림)</span>
+      <kbd>우클릭 (동물)</kbd><span>밀로 번식 / 가위로 털 깎기 / 뼈로 늑대 길들이기 / 말 타기 (안장을 얹으면 조종)</span>
+      <kbd>방패 들고 우클릭 유지</kbd><span>앞에서 오는 공격 막기</span>
+      <kbd>레버·버튼 우클릭</kbd><span>레드스톤 신호 켜기 (피스톤·램프·문·TNT 작동)</span>
       <kbd>E</kbd><span>인벤토리와 제작</span>
       <kbd>1-9 / Tab / [ ]</kbd><span>아이템 고르기 (마우스 잠금 중엔 휠도 가능)</span>
       <kbd>Q</kbd><span>들고 있는 아이템 버리기</span>
@@ -4401,7 +4404,8 @@ function drawMap() {
   for (let j = -1; j < 64; j++) for (let i = 0; i < 64; i++) {
     const x = px - 32 + i, z = pz - 32 + j;
     let y = top, id = B.AIR;
-    if (chunkReady(x, z)) for (; y > 0; y--) { id = getBlock(x, y, z); if (id !== B.AIR && blockColor[id]) break; }
+    const ch = chunkOf(x, z); // 청크 배열을 직접 읽어서 빠르게
+    if (ch) { const lx = x - ch.cx * CS, lz = z - ch.cz * CS; for (; y > 0; y--) { id = ch.data[vidx(lx, y, lz)]; if (id !== B.AIR && blockColor[id]) break; } }
     hs[(j + 1) * 64 + i] = y;
     if (j < 0) continue;
     const o = (j * 64 + i) * 4, c = id === B.AIR ? [0, 0, 0] : blockColor[id];
@@ -6285,10 +6289,7 @@ function updateWeather(dt) {
   precipBiomeT -= dt;
   if (precipBiomeT <= 0) { precipBiomeT = 1; precipBiome = biomeAt(Math.floor(cp.x), Math.floor(cp.z)); }
   const kind = precipBiome === BIO.DESERT ? 0 : precipBiome === BIO.SNOW ? 2 : 1;
-  if (rainGain) {
-    const outside = skyExposed(cp.x, cp.y + 1, cp.z) ? 1 : 0.35;
-    rainGain.gain.value = kind === 1 ? amt * 0.16 * outside : 0;
-  }
+  if (rainGain) rainGain.gain.value = kind === 1 && amt > 0 ? amt * 0.16 * (skyExposed(cp.x, cp.y + 1, cp.z) ? 1 : 0.35) : 0;
   rainLines.visible = amt > 0 && kind === 1; snowPts.visible = amt > 0 && kind === 2;
   if (!amt || !kind) return;
   const active = Math.floor(PRECIP * amt), R = 18;
