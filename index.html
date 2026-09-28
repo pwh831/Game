@@ -316,7 +316,7 @@ const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_
   BLAZE_POWDER: 163, ENDER_PEARL: 164, EYE_OF_ENDER: 165,
   GHAST_TEAR: 166, NETHER_BRICK_ITEM: 167, REDSTONE: 168,
   STRING: 169, FISHING_ROD: 170, RAW_FISH: 171, COOKED_FISH: 172,
-  BOTTLE: 173, WATER_BOTTLE: 174, P_HEAL: 175, P_REGEN: 176, P_SPEED: 177, P_FIRE: 178, P_NIGHT: 179, P_STRENGTH: 180, P_JUMP: 181, SHEARS: 182, BONE_MEAL: 183, GOLDEN_APPLE: 184, COMPASS: 185, CLOCK: 186, SADDLE: 187 };
+  BOTTLE: 173, WATER_BOTTLE: 174, P_HEAL: 175, P_REGEN: 176, P_SPEED: 177, P_FIRE: 178, P_NIGHT: 179, P_STRENGTH: 180, P_JUMP: 181, SHEARS: 182, BONE_MEAL: 183, GOLDEN_APPLE: 184, COMPASS: 185, CLOCK: 186, SADDLE: 187, SHIELD: 188 };
 // 갑옷: 132부터 [가죽, 철, 다이아몬드] × [투구, 흉갑, 레깅스, 부츠]
 const ARMOR_SET = [['leather', '가죽', 5, [1, 3, 2, 1]], ['iron', '철', 15, [2, 6, 5, 2]], ['diamond', '다이아몬드', 33, [3, 8, 6, 3]]];
 const ARMOR_PART = ['투구', '흉갑', '레깅스', '부츠'], ARMOR_BASE_DUR = [11, 16, 15, 13], ARMOR_COST = [5, 8, 7, 4];
@@ -558,6 +558,7 @@ ITEMS[I.NETHER_BRICK_ITEM] = { name: '네더 벽돌 조각', stack: 64 };
 ITEMS[I.REDSTONE] = { name: '레드스톤 가루', stack: 64, placeAs: B.DUST_OFF };
 ITEMS[I.STRING] = { name: '실', stack: 64 };
 ITEMS[I.GOLDEN_APPLE] = { name: '황금 사과', stack: 64, food: 4, sat: 9.6, regen: 10 };
+ITEMS[I.SHIELD] = { name: '방패', stack: 1, dur: 336, shield: true };
 ITEMS[I.SADDLE] = { name: '안장', stack: 1 };
 ITEMS[I.COMPASS] = { name: '나침반', stack: 1, gadget: 'compass' };
 ITEMS[I.CLOCK] = { name: '시계', stack: 1, gadget: 'clock' };
@@ -637,6 +638,7 @@ RECIPES.push(
   { out: [I.GOLDEN_APPLE, 1], in: [[I.APPLE, 1], [I.GOLD_INGOT, 8]], table: true },
   { out: [I.COMPASS, 1], in: [[I.IRON_INGOT, 4], [I.REDSTONE, 1]], table: true },
   { out: [I.SADDLE, 1], in: [[I.LEATHER, 5], [I.IRON_INGOT, 1]], table: true },
+  { out: [I.SHIELD, 1], in: [[B.PLANKS, 6], [I.IRON_INGOT, 1]], table: true },
   { out: [I.CLOCK, 1], in: [[I.GOLD_INGOT, 4], [I.REDSTONE, 1]], table: true },
   ...WOOL_COLORS.map(([, , ing], k) => ({ out: [B.CWOOL + k, ing.length], in: [[B.WOOL, ing.length], ...ing] })),
   { out: [B.BREW_STAND, 1], in: [[I.BLAZE_ROD, 1], [B.COBBLE, 3]], table: true },
@@ -667,7 +669,7 @@ const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [B.BIRCH_LOG, 1.5], [I
 const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.CHEST, B.BED, B.WOOL, B.TNT, B.BEDROCK,
   B.SANDSTONE, B.BIRCH_LOG, B.STONE_BRICK, B.PLANK_SLAB, B.COBBLE_SLAB, B.STONE_SLAB, B.PLANK_STAIRS, B.COBBLE_STAIRS, B.FENCE, B.ICE, B.CACTUS, B.FLOWER_RED, B.FLOWER_YELLOW,
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
-  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, I.GOLDEN_APPLE, I.COMPASS, I.CLOCK, I.SADDLE, ...WOOL_COLORS.map((_, k) => B.CWOOL + k), I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
+  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, I.GOLDEN_APPLE, I.COMPASS, I.CLOCK, I.SADDLE, I.SHIELD, ...WOOL_COLORS.map((_, k) => B.CWOOL + k), I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
   I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD,
   B.PISTON + 3, B.STICKY + 3, B.REDSTONE_ORE, B.LEVER_OFF, B.BUTTON_OFF, B.PLATE_OFF, B.RS_TORCH, B.LAMP_OFF, B.REDSTONE_BLOCK, I.REDSTONE,
@@ -1902,6 +1904,13 @@ function drawItemIcon(g, id) {
       else g.fillStyle = 'rgba(210,230,245,.35)', g.fillRect(x * 2, y * 2, 2, 2);
     }
     if (liquid) px(6, 9, [255, 255, 255], 0);
+  } else if (id === I.SHIELD) {
+    for (let y = 1; y < 15; y++) for (let x = 3; x < 13; x++) {
+      if (y > 10 && Math.abs(x - 7.5) > 15 - y) continue;
+      const rim = x === 3 || x === 12 || y === 1 || (y > 10 && Math.abs(x - 7.5) > 14 - y);
+      px(x, y, rim ? [150, 150, 160] : (x + y) % 4 === 0 ? [120, 86, 44] : [150, 110, 60], 10);
+    }
+    for (let y = 3; y < 12; y++) px(7, y, [150, 150, 160], 6);
   } else if (id === I.SADDLE) {
     for (let y = 4; y < 12; y++) for (let x = 2; x < 14; x++) { const top = y < 7 && (x < 4 || x > 11); if (!top) px(x, y, y === 4 || y === 11 ? [90, 50, 26] : [140, 82, 44], 12); }
     for (let y = 11; y < 15; y++) { px(3, y, [70, 70, 70]); px(12, y, [70, 70, 70]); }
@@ -2545,6 +2554,7 @@ function physics(dt) {
   const sprint = shift && !player.flying && (mode !== 'survival' || player.food > 6);
   let speed = player.flying ? 10 : (sprint ? 5.8 : 4.3);
   if (player.fx.speed > 0 && !player.flying) speed *= 1.35;
+  if (player.blocking) speed *= 0.35;
   if (player.inWater && !player.flying) speed *= player.inLava ? 0.35 : 0.55;
   if (onSoul && !player.flying) speed *= 0.5;
   const tx = (-sy * fwd + cy * str) * speed;
@@ -2639,6 +2649,18 @@ function armorPoints() { return armor.reduce((a, s) => a + (s ? ITEMS[s.id].def 
 function damagePlayer(n, dir, cause, ignoreArmor) {
   if (mode !== 'survival' || player.dead || player.invuln > 0 || n <= 0) return;
   if (player.fx.fire > 0 && cause && /불|용암/.test(cause)) return;
+  if (player.blocking && dir) {
+    // 방패: 앞쪽(약 110도 안)에서 온 공격은 막고 방패만 닳음
+    const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw), l = Math.hypot(dir.x, dir.z) || 1;
+    if (-(fx * dir.x + fz * dir.z) / l > 0.35) {
+      sfxNoise(0.12, 600, { q: 2, vol: 0.4 }); sfxTone(180, 0.1, { type: 'square', vol: 0.08, lp: 800 });
+      player.vel.x += dir.x / l * 2.5; player.vel.z += dir.z / l * 2.5;
+      const s = heldItem();
+      if (s && ITEMS[s.id].shield) { s.dur = (s.dur || ITEMS[s.id].dur) - Math.max(1, Math.round(n)); if (s.dur <= 0) { inv[selected] = null; sfx.glassBreak(); toast('방패가 부서졌습니다'); } refreshInvUI(); }
+      player.invuln = 0.4;
+      return;
+    }
+  }
   const pts = ignoreArmor ? 0 : armorPoints();
   if (pts) {
     // 방어 1점당 4% 감소 (최대 80%), 입고 있는 갑옷이 조금씩 닳음
@@ -4794,7 +4816,13 @@ function attack(m) {
   if (m === player.riding) return;
   swingHand();
   const s = heldItem(), it = s ? ITEMS[s.id] : null;
-  const dmg = (it && it.dmg ? it.dmg : 1) + 1.25 * enchLv(s, 'sharpness') + (player.fx.strength > 0 ? 3 : 0);
+  let dmg = (it && it.dmg ? it.dmg : 1) + 1.25 * enchLv(s, 'sharpness') + (player.fx.strength > 0 ? 3 : 0);
+  // 떨어지는 중에 때리면 치명타 (1.5배)
+  if (!player.onGround && player.vel.y < -1 && !player.inWater && !player.flying) {
+    dmg *= 1.5;
+    spawnBlockParticles(B.GLOWSTONE, m.pos.x - 0.5, m.pos.y + m.h * 0.5 - 0.5, m.pos.z - 0.5, 8);
+    sfxTone(900, 0.08, { type: 'square', vol: 0.06, to: 1400 });
+  }
   const dx = m.pos.x - player.pos.x, dz = m.pos.z - player.pos.z, l = Math.hypot(dx, dz) || 1;
   sfx.hit();
   hurtMob(m, dmg, { x: dx / l, z: dz / l });
@@ -5181,6 +5209,7 @@ function interact(dt) {
   if (!mine.active) crack.visible = false;
   const rightHeld = (act.right || keys.has('KeyR')) && !ui;
   const held = heldItem(), bowHeld = !!(held && ITEMS[held.id].bow);
+  player.blocking = rightHeld && !!(held && ITEMS[held.id].shield) && !player.riding;
   if (bowHeld && !ui) {
     // 활: 누르고 있는 동안 당기고, 놓으면 쏨
     if (rightHeld) bowCharge = Math.min(1, bowCharge + dt);
@@ -5274,6 +5303,7 @@ function updateHand(dt) {
   if (player.onGround && spd > 0.5) bobPhase += dt * spd * 2.2;
   hand.position.set(0.42 - sw * 0.12 + Math.cos(bobPhase) * 0.012, -0.4 + sw * 0.08 - Math.abs(Math.sin(bobPhase)) * 0.02, -0.62 - sw * 0.1);
   hand.rotation.set(-sw * 0.9, sw * 0.3, 0);
+  if (player.blocking) { hand.position.set(0.18, -0.3, -0.5); hand.rotation.set(0, -0.5, 0); }
   const lv = brightnessAt(player.pos.x, player.pos.y + 1.6, player.pos.z);
   for (const mt of [handBlockMat, handSkinMat, ...handItemMats.values()]) mt.color.setScalar(lv);
   handSkinMat.color.setRGB(lv * 0.85, lv * 0.64, lv * 0.5);
