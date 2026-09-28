@@ -25,6 +25,9 @@
   canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
   body.playing, body.playing * { cursor: none !important; }
   #water-tint { position: fixed; inset: 0; background: rgba(30, 70, 170, 0.35); pointer-events: none; }
+  #portal-tint { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(150, 60, 230, .35), rgba(90, 20, 170, .85)); }
+  #fire { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
+    background: linear-gradient(to top, rgba(255, 110, 20, .75), rgba(255, 170, 40, .25) 35%, transparent 60%); }
   #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .35s;
     background: radial-gradient(ellipse at center, transparent 45%, rgba(200, 20, 20, .55)); }
   #steer-ring { position: fixed; left: 40%; top: 40%; width: 20%; height: 20%; border: 1px dashed rgba(255,255,255,.28); border-radius: 50%; pointer-events: none; }
@@ -44,6 +47,11 @@
   #hunger { display: flex; flex-direction: row-reverse; gap: 1px; padding-right: 4px; }
   #hunger i { width: 18px; height: 18px; background-size: 100% 100%; image-rendering: pixelated; }
   #armorbar i { width: 18px; height: 18px; background-size: 100% 100%; image-rendering: pixelated; }
+  #bossbar { position: fixed; left: 50%; transform: translateX(-50%); top: calc(12px + env(safe-area-inset-top, 0px)); width: min(440px, 70vw);
+    text-align: center; font-size: 13px; color: #f0d8ff; text-shadow: 1px 1px 0 #000; pointer-events: none; }
+  #bossbar b { font-weight: normal; display: block; margin-bottom: 3px; }
+  .bb-track { height: 8px; background: rgba(40, 10, 50, .8); border: 1px solid #000; }
+  #bb-fill { display: block; height: 100%; background: linear-gradient(#e070ff, #9a30c8); width: 100%; }
   #sleep { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; }
   .armor-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 11px; color: var(--ink-dim); flex-wrap: wrap; }
   #armorslots { display: flex; gap: 3px; }
@@ -132,6 +140,8 @@
 <canvas id="game" tabindex="-1"></canvas>
 <div id="water-tint" hidden></div>
 <div id="hurt"></div>
+<div id="fire"></div>
+<div id="portal-tint"></div>
 <div id="crosshair"></div>
 <div id="steer-ring" hidden></div>
 <div id="steer-dot" hidden></div>
@@ -139,6 +149,7 @@
 <div id="toast"></div>
 <div id="blockname"></div>
 <div id="sleep"></div>
+<div id="bossbar" hidden><b>엔더 드래곤</b><div class="bb-track"><i id="bb-fill"></i></div></div>
 <div id="hud"><div id="armorbar" hidden></div><div class="barrow"><div id="hearts"></div><div id="hunger"></div></div><div id="hotbar"></div></div>
 
 <div id="touch" hidden>
@@ -191,6 +202,8 @@
       <kbd>F</kbd><span>비행 (크리에이티브)</span>
       <kbd>Esc</kbd><span>일시정지</span>
     </div>
+    <p>네더: 흑요석으로 가로 4 × 세로 5 틀을 세우고 부싯돌과 부시로 불을 붙이면 차원문이 열립니다. 흑요석은 용암에 물을 부어 만들고(양동이), 다이아몬드 곡괭이로 캡니다.<br>
+    엔드: 블레이즈 가루 + 엔더 진주로 엔더의 눈을 만들어 던지면 엔드 요새 쪽으로 날아갑니다. 지하의 차원문 틀 12개에 눈을 넣으면 열립니다.</p>
     <p>아이패드 트랙패드: 커서를 화면 가운데에서 오른쪽에 두면 오른쪽으로 계속 돌고, 가운데로 가져오면 멈춥니다(가운데 원 안). 두 손가락으로 쓸어도 시점이 돕니다. 우클릭은 두 손가락 클릭, Ctrl이나 ⌥를 누른 채 클릭, 또는 R 키 중 편한 것을 쓰세요.</p>
     <div class="settings">
       <label for="set-look">마우스 잠금이 안 될 때 시점 조작</label>
@@ -244,7 +257,9 @@ const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, WAT
   CHEST: 28, BED: 29, WOOL: 30, TNT: 31,
   FARMLAND: 32, WHEAT0: 33, WHEAT1: 34, WHEAT2: 35, WHEAT3: 36, TALL_GRASS: 37, FLOWER_RED: 38, FLOWER_YELLOW: 39,
   CACTUS: 40, ICE: 41, SANDSTONE: 42, BIRCH_LOG: 43, STONE_BRICK: 44, PLANK_SLAB: 45, COBBLE_SLAB: 46, STONE_SLAB: 47,
-  PLANK_STAIRS: 48, COBBLE_STAIRS: 52, FENCE: 56, DOOR: 57 }; // 계단은 방향 4개, 문은 방향 4 × 열림 2 × 위아래 2 = 16개
+  PLANK_STAIRS: 48, COBBLE_STAIRS: 52, FENCE: 56, DOOR: 57, // 계단은 방향 4개, 문은 방향 4 × 열림 2 × 위아래 2 = 16개
+  LAVA: 73, OBSIDIAN: 74, GRAVEL: 75, NETHERRACK: 76, SOUL_SAND: 77, GLOWSTONE: 78, QUARTZ_ORE: 79, NETHER_BRICK: 80,
+  PORTAL_X: 81, PORTAL_Z: 82, END_STONE: 83, EPF: 84, EPF_EYE: 85, END_PORTAL: 86, DRAGON_EGG: 87, QUARTZ_BLOCK: 88 };
 const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5, LOG_TOP: 6, LEAVES: 7,
   WATER: 8, PLANKS: 9, COBBLE: 10, GLASS: 11, BRICK: 12, SNOW: 13, SNOW_SIDE: 14, BEDROCK: 15, TABLE_TOP: 16, TABLE_SIDE: 17,
   COAL_ORE: 18, IRON_ORE: 19, GOLD_ORE: 20, DIAMOND_ORE: 21, FURNACE_FRONT: 22, FURNACE_TOP: 23,
@@ -252,8 +267,10 @@ const T = { GRASS_TOP: 0, GRASS_SIDE: 1, DIRT: 2, STONE: 3, SAND: 4, LOG_SIDE: 5
   CHEST_TOP: 28, CHEST_FRONT: 29, BED_TOP: 30, BED_SIDE: 31, WOOL: 32, TNT_SIDE: 33, TNT_TOP: 34,
   FARMLAND_TOP: 35, WHEAT0: 36, WHEAT1: 37, WHEAT2: 38, WHEAT3: 39, TALL_GRASS: 40, FLOWER_RED: 41, FLOWER_YELLOW: 42,
   CACTUS_SIDE: 43, CACTUS_TOP: 44, ICE: 45, SANDSTONE: 46, SANDSTONE_TOP: 47, BIRCH_SIDE: 48, STONE_BRICK: 49,
-  DOOR_BOTTOM: 50, DOOR_TOP: 51 };
-const NT = 64, TILE = 16;
+  DOOR_BOTTOM: 50, DOOR_TOP: 51, LAVA: 52, OBSIDIAN: 53, GRAVEL: 54, NETHERRACK: 55, SOUL_SAND: 56, GLOWSTONE: 57,
+  QUARTZ_ORE: 58, NETHER_BRICK: 59, PORTAL: 60, END_STONE: 61, EPF_TOP: 62, EPF_SIDE: 63, EPF_EYE_TOP: 64, END_PORTAL: 65,
+  DRAGON_EGG: 66, QUARTZ_BLOCK: 67 };
+const NT = 80, TILE = 16;
 
 const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_SWORD: 104, WOOD_AXE: 105, STONE_AXE: 106,
   WOOD_SHOVEL: 107, STONE_SHOVEL: 108, APPLE: 109, PORK: 110, FLESH: 111,
@@ -262,7 +279,9 @@ const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_
   DIA_PICK: 121, DIA_SWORD: 122, DIA_AXE: 123, DIA_SHOVEL: 124,
   LEATHER: 125, BEEF: 126, STEAK: 127, MUTTON: 128, COOKED_MUTTON: 129, BONE: 130, GUNPOWDER: 131,
   SEEDS: 144, WHEAT: 145, BREAD: 146, BOW: 147, ARROW: 148, WOOD_HOE: 149, STONE_HOE: 150, IRON_HOE: 151, DIA_HOE: 152,
-  DOOR: 153, BOAT: 154, EMERALD: 155 };
+  DOOR: 153, BOAT: 154, EMERALD: 155,
+  FLINT: 156, FLINT_STEEL: 157, BUCKET: 158, WATER_BUCKET: 159, LAVA_BUCKET: 160, QUARTZ: 161, BLAZE_ROD: 162,
+  BLAZE_POWDER: 163, ENDER_PEARL: 164, EYE_OF_ENDER: 165, GHAST_TEAR: 166, NETHER_BRICK_ITEM: 167 };
 // 갑옷: 132부터 [가죽, 철, 다이아몬드] × [투구, 흉갑, 레깅스, 부츠]
 const ARMOR_SET = [['leather', '가죽', 5, [1, 3, 2, 1]], ['iron', '철', 15, [2, 6, 5, 2]], ['diamond', '다이아몬드', 33, [3, 8, 6, 3]]];
 const ARMOR_PART = ['투구', '흉갑', '레깅스', '부츠'], ARMOR_BASE_DUR = [11, 16, 15, 13], ARMOR_COST = [5, 8, 7, 4];
@@ -284,7 +303,7 @@ BLOCKS[B.COBBLE]  = { name: '조약돌', tex: [T.COBBLE, T.COBBLE, T.COBBLE], ha
 BLOCKS[B.GLASS]   = { name: '유리', tex: [T.GLASS, T.GLASS, T.GLASS], transparent: true, hard: 0.3, drop: 0 };
 BLOCKS[B.BRICK]   = { name: '벽돌', tex: [T.BRICK, T.BRICK, T.BRICK], hard: 2, tool: 'pickaxe', needsTool: true, tier: 1 };
 BLOCKS[B.SNOW]    = { name: '눈 덮인 흙', tex: [T.SNOW, T.DIRT, T.SNOW_SIDE], hard: 0.5, tool: 'shovel', drop: B.DIRT };
-BLOCKS[B.BEDROCK] = { name: '기반암', tex: [T.BEDROCK, T.BEDROCK, T.BEDROCK], hard: Infinity };
+BLOCKS[B.BEDROCK] = { name: '기반암', tex: [T.BEDROCK, T.BEDROCK, T.BEDROCK], hard: Infinity, blast: true };
 BLOCKS[B.TABLE]   = { name: '작업대', tex: [T.TABLE_TOP, T.PLANKS, T.TABLE_SIDE], hard: 2.5, tool: 'axe' };
 BLOCKS[B.COAL_ORE]    = { name: '석탄 광석', tex: [T.COAL_ORE, T.COAL_ORE, T.COAL_ORE], hard: 3, tool: 'pickaxe', needsTool: true, tier: 1, drop: I.COAL };
 BLOCKS[B.IRON_ORE]    = { name: '철 광석', tex: [T.IRON_ORE, T.IRON_ORE, T.IRON_ORE], hard: 3, tool: 'pickaxe', needsTool: true, tier: 2 };
@@ -319,6 +338,30 @@ const slab = (name, tile, extra) => ({ name, tex: [tile, tile, tile], height: 0.
 BLOCKS[B.PLANK_SLAB] = slab('판자 반블록', T.PLANKS, { hard: 2, tool: 'axe', snd: 'wood' });
 BLOCKS[B.COBBLE_SLAB] = slab('조약돌 반블록', T.COBBLE, { hard: 2, tool: 'pickaxe', needsTool: true, tier: 1 });
 BLOCKS[B.STONE_SLAB] = slab('돌 반블록', T.STONE, { hard: 2, tool: 'pickaxe', needsTool: true, tier: 1 });
+// 네더와 엔드
+const one = t => [t, t, t];
+BLOCKS[B.LAVA] = { name: '용암', tex: one(T.LAVA), solid: false, transparent: true, ao: false, liquid: true, emit: 15, hard: Infinity, noItem: true };
+BLOCKS[B.OBSIDIAN] = { name: '흑요석', tex: one(T.OBSIDIAN), hard: 50, tool: 'pickaxe', needsTool: true, tier: 4, blast: true };
+BLOCKS[B.GRAVEL] = { name: '자갈', tex: one(T.GRAVEL), hard: 0.6, tool: 'shovel', snd: 'dirt' };
+BLOCKS[B.NETHERRACK] = { name: '네더랙', tex: one(T.NETHERRACK), hard: 0.4, tool: 'pickaxe', needsTool: true, tier: 1 };
+BLOCKS[B.SOUL_SAND] = { name: '영혼 모래', tex: one(T.SOUL_SAND), hard: 0.5, tool: 'shovel', transparent: true, ao: false,
+  boxes: [[0, 0, 0, 1, 14 / 16, 1]], slow: true, snd: 'sand' };
+BLOCKS[B.GLOWSTONE] = { name: '발광석', tex: one(T.GLOWSTONE), hard: 0.3, emit: 15, snd: 'glass' };
+BLOCKS[B.QUARTZ_ORE] = { name: '네더 석영 광석', tex: one(T.QUARTZ_ORE), hard: 3, tool: 'pickaxe', needsTool: true, tier: 1, drop: I.QUARTZ };
+BLOCKS[B.NETHER_BRICK] = { name: '네더 벽돌', tex: one(T.NETHER_BRICK), hard: 2, tool: 'pickaxe', needsTool: true, tier: 1 };
+BLOCKS[B.PORTAL_X] = { name: '네더 차원문', tex: one(T.PORTAL), solid: false, transparent: true, ao: false, emit: 11, hard: 0,
+  boxes: [[0, 0, 6 / 16, 1, 1, 10 / 16]], portal: true, noItem: true, drop: 0, snd: 'glass' };
+BLOCKS[B.PORTAL_Z] = { ...BLOCKS[B.PORTAL_X], boxes: [[6 / 16, 0, 0, 10 / 16, 1, 1]] };
+BLOCKS[B.END_STONE] = { name: '엔드 돌', tex: one(T.END_STONE), hard: 3, tool: 'pickaxe', needsTool: true, tier: 1, blast: true };
+BLOCKS[B.EPF] = { name: '엔드 차원문 틀', tex: [T.EPF_TOP, T.END_STONE, T.EPF_SIDE], hard: Infinity, blast: true, transparent: true, ao: false,
+  boxes: [[0, 0, 0, 1, 13 / 16, 1]] };
+BLOCKS[B.EPF_EYE] = { ...BLOCKS[B.EPF], tex: [T.EPF_EYE_TOP, T.END_STONE, T.EPF_SIDE], noItem: true, emit: 1 };
+BLOCKS[B.END_PORTAL] = { name: '엔드 차원문', tex: one(T.END_PORTAL), solid: false, transparent: true, ao: false, emit: 15, hard: Infinity,
+  boxes: [[0, 0.72, 0, 1, 0.78, 1]], endPortal: true, noItem: true, blast: true };
+BLOCKS[B.DRAGON_EGG] = { name: '드래곤 알', tex: one(T.DRAGON_EGG), hard: 3, transparent: true, ao: false, blast: true,
+  boxes: [[2 / 16, 0, 2 / 16, 14 / 16, 12 / 16, 14 / 16], [4 / 16, 12 / 16, 4 / 16, 12 / 16, 1, 12 / 16]] };
+BLOCKS[B.QUARTZ_BLOCK] = { name: '석영 블록', tex: one(T.QUARTZ_BLOCK), hard: 0.8, tool: 'pickaxe', needsTool: true, tier: 1 };
+
 // 모양이 있는 블록: boxes는 [x0, y0, z0, x1, y1, z1] (칸 안의 0~1 좌표) 목록
 // 방향 f: 0 북(-z), 1 동(+x), 2 남(+z), 3 서(-x) — 플레이어가 바라보던 방향
 const STAIR_TOP = [[0, 0.5, 0, 1, 1, 0.5], [0.5, 0.5, 0, 1, 1, 1], [0, 0.5, 0.5, 1, 1, 1], [0, 0.5, 0, 0.5, 1, 1]];
@@ -361,7 +404,11 @@ BLOCKS.forEach((b, i) => { LOP[i] = b.solid && !b.transparent ? 1 : 0; EMIT[i] =
 ATTEN[B.LEAVES] = 1; ATTEN[B.WATER] = 2;
 
 // 광맥: [블록, 청크당 개수, 최저 높이, 최고 높이, 광맥 크기]
-const ORE_GEN = [[B.COAL_ORE, 16, 4, 70, 9], [B.IRON_ORE, 9, 4, 48, 6], [B.GOLD_ORE, 2.2, 3, 28, 6], [B.DIAMOND_ORE, 1.1, 2, 15, 5]];
+const ORE_GEN = [[B.COAL_ORE, 16, 4, 70, 9], [B.IRON_ORE, 9, 4, 48, 6], [B.GOLD_ORE, 2.2, 3, 28, 6], [B.DIAMOND_ORE, 1.1, 2, 15, 5],
+  [B.GRAVEL, 4, 4, 60, 14]];
+const LIQUID = new Uint8Array(BLOCKS.length);
+BLOCKS.forEach((b, i) => { if (b.liquid) LIQUID[i] = 1; });
+LIQUID[B.WATER] = 1;
 
 const ITEMS = {};
 BLOCKS.forEach((b, id) => { if (id !== B.AIR && id !== B.WATER && !b.noItem) ITEMS[id] = { name: b.name, stack: 64, block: true }; });
@@ -406,6 +453,18 @@ ITEMS[I.ARROW] = { name: '화살', stack: 64 };
 ITEMS[I.DOOR] = { name: '나무 문', stack: 64, door: true };
 ITEMS[I.BOAT] = { name: '보트', stack: 1, boat: true };
 ITEMS[I.EMERALD] = { name: '에메랄드', stack: 64 };
+ITEMS[I.FLINT] = { name: '부싯돌', stack: 64 };
+ITEMS[I.FLINT_STEEL] = { name: '부싯돌과 부시', stack: 1, dur: 64, igniter: true };
+ITEMS[I.BUCKET] = { name: '양동이', stack: 16, bucket: B.AIR };
+ITEMS[I.WATER_BUCKET] = { name: '물 양동이', stack: 1, bucket: B.WATER };
+ITEMS[I.LAVA_BUCKET] = { name: '용암 양동이', stack: 1, bucket: B.LAVA };
+ITEMS[I.QUARTZ] = { name: '네더 석영', stack: 64 };
+ITEMS[I.BLAZE_ROD] = { name: '블레이즈 막대', stack: 64 };
+ITEMS[I.BLAZE_POWDER] = { name: '블레이즈 가루', stack: 64 };
+ITEMS[I.ENDER_PEARL] = { name: '엔더 진주', stack: 16, pearl: true };
+ITEMS[I.EYE_OF_ENDER] = { name: '엔더의 눈', stack: 64, eye: true };
+ITEMS[I.GHAST_TEAR] = { name: '가스트 눈물', stack: 64 };
+ITEMS[I.NETHER_BRICK_ITEM] = { name: '네더 벽돌 조각', stack: 64 };
 [[I.WOOD_HOE, '나무', 'wood'], [I.STONE_HOE, '돌', 'stone'], [I.IRON_HOE, '철', 'iron'], [I.DIA_HOE, '다이아몬드', 'diamond']]
   .forEach(([id, label, mat]) => { ITEMS[id] = toolDef(label + ' 괭이', 'hoe', mat); });
 ITEMS[I.BONE] = { name: '뼈', stack: 64 };
@@ -447,6 +506,12 @@ RECIPES.push(
   { out: [B.FENCE, 3], in: [[B.PLANKS, 4], [I.STICK, 2]], table: true },
   { out: [I.DOOR, 3], in: [[B.PLANKS, 6]], table: true },
   { out: [I.BOAT, 1], in: [[B.PLANKS, 5]], table: true },
+  { out: [I.FLINT_STEEL, 1], in: [[I.IRON_INGOT, 1], [I.FLINT, 1]] },
+  { out: [I.BUCKET, 1], in: [[I.IRON_INGOT, 3]], table: true },
+  { out: [I.BLAZE_POWDER, 2], in: [[I.BLAZE_ROD, 1]] },
+  { out: [I.EYE_OF_ENDER, 1], in: [[I.ENDER_PEARL, 1], [I.BLAZE_POWDER, 1]] },
+  { out: [B.QUARTZ_BLOCK, 1], in: [[I.QUARTZ, 4]], table: true },
+  { out: [B.NETHER_BRICK, 1], in: [[I.NETHER_BRICK_ITEM, 4]], table: true },
   { out: [B.COBBLE_SLAB, 6], in: [[B.COBBLE, 3]], table: true },
   { out: [B.STONE_SLAB, 6], in: [[B.STONE, 3]], table: true },
   { out: [B.IRON_BLOCK, 1], in: [[I.IRON_INGOT, 9]], table: true },
@@ -459,7 +524,7 @@ RECIPES.push(
 ARMOR_SET.forEach(([, , , ], si) => ARMOR_PART.forEach((_, pi) => RECIPES.push(
   { out: [armorId(si, pi), 1], in: [[[I.LEATHER, I.IRON_INGOT, I.DIAMOND][si], ARMOR_COST[pi]]], table: true })));
 const SMELT = [[B.IRON_ORE, I.IRON_INGOT], [B.GOLD_ORE, I.GOLD_INGOT], [B.SAND, B.GLASS], [B.COBBLE, B.STONE],
-  [I.BEEF, I.STEAK], [I.MUTTON, I.COOKED_MUTTON],
+  [I.BEEF, I.STEAK], [I.MUTTON, I.COOKED_MUTTON], [B.NETHERRACK, I.NETHER_BRICK_ITEM],
   [I.PORK, I.COOKED_PORK], [B.LOG, I.COAL]];
 const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [B.BIRCH_LOG, 1.5], [I.STICK, 0.5]];
 const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.CHEST, B.BED, B.WOOL, B.TNT, B.BEDROCK,
@@ -467,7 +532,10 @@ const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLA
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
   I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH,
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
-  I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD];
+  I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD,
+  B.OBSIDIAN, B.GRAVEL, B.NETHERRACK, B.SOUL_SAND, B.GLOWSTONE, B.QUARTZ_ORE, B.NETHER_BRICK, B.QUARTZ_BLOCK, B.END_STONE, B.EPF, B.DRAGON_EGG,
+  I.FLINT, I.FLINT_STEEL, I.BUCKET, I.WATER_BUCKET, I.LAVA_BUCKET, I.QUARTZ, I.BLAZE_ROD, I.BLAZE_POWDER, I.ENDER_PEARL, I.EYE_OF_ENDER,
+  I.GHAST_TEAR, I.NETHER_BRICK_ITEM];
 const CREATIVE_HOTBAR = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.PLANKS, B.LOG, B.GLASS, B.BRICK, B.TORCH];
 
 // =====================================================================
@@ -477,8 +545,15 @@ let save = null;
 try { save = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { save = null; }
 let SEED = save && save.seed ? save.seed : (Math.random() * 1e9) | 0;
 let mode = save ? (save.mode || 'creative') : 'survival';
-const edits = new Map();
-if (save && save.edits) for (const k in save.edits) edits.set(k, new Map(save.edits[k]));
+// 차원: overworld(지상) / nether / end. 블록 편집은 차원별로 따로 저장
+let dim = save && save.dim ? save.dim : 'overworld';
+const editsByDim = { overworld: new Map(), nether: new Map(), end: new Map() };
+const loadEdits = (src, m) => { if (src) for (const k in src) m.set(k, new Map(src[k])); };
+loadEdits(save && save.edits, editsByDim.overworld);
+loadEdits(save && save.editsN, editsByDim.nether);
+loadEdits(save && save.editsE, editsByDim.end);
+let edits = editsByDim[dim];
+const endState = { dragonDead: !!(save && save.dragonDead), crystalsGone: new Set(save && save.crystalsGone || []) };
 const inv = new Array(36).fill(null);
 let fuel = save && save.fuel ? save.fuel : 0;
 const deser = s => s && ITEMS[s[0]] ? { id: s[0], count: s[1], dur: s[2] == null ? undefined : s[2] } : null;
@@ -504,9 +579,11 @@ function writeSave() {
   const obj = { v: 2, seed: SEED, mode, time: worldTime, hp: player.hp, food: player.food, sat: player.sat, fuel, edits: {},
     player: [player.pos.x, player.pos.y, player.pos.z, player.yaw, player.pitch, player.flying],
     inv: inv.map(ser), armor: armor.map(ser), spawn: spawnPoint, chests: {},
-    boats: boats.map(b => [+b.pos.x.toFixed(2), +b.pos.y.toFixed(2), +b.pos.z.toFixed(2), +b.yaw.toFixed(2)]) };
+    boats: dim === 'overworld' ? boats.map(b => [+b.pos.x.toFixed(2), +b.pos.y.toFixed(2), +b.pos.z.toFixed(2), +b.yaw.toFixed(2)]) : (owBoats || []) };
   for (const [k, arr] of chests) obj.chests[k] = arr.map(ser);
-  for (const [k, m] of edits) if (m.size) obj.edits[k] = [...m];
+  const dump = m => { const o = {}; for (const [k, v] of m) if (v.size) o[k] = [...v]; return o; };
+  obj.edits = dump(editsByDim.overworld); obj.editsN = dump(editsByDim.nether); obj.editsE = dump(editsByDim.end);
+  obj.dim = dim; obj.dragonDead = endState.dragonDead; obj.crystalsGone = [...endState.crystalsGone];
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(obj)); } catch (e) { /* 저장할 수 없는 환경 */ }
 }
 
@@ -621,13 +698,17 @@ function villageInCell(gx, gz) {
     const x = gx * VCELL + 48 + Math.floor(hash2(gx, gz, 102) * (VCELL - 96));
     const z = gz * VCELL + 48 + Math.floor(hash2(gx, gz, 103) * (VCELL - 96));
     const bio = biomeAt(x, z), y = terrainHeight(x, z);
-    if ((bio === BIO.PLAINS || bio === BIO.DESERT) && y > SEA + 1 && y < 56) v = { x, z, y, bio, key: k, blocks: null, chests: [] };
+    if ((bio === BIO.PLAINS || bio === BIO.DESERT) && y > SEA + 1 && y < 56) {
+      v = { x, z, y, bio, key: k, blocks: null, chests: [], loot: villageLoot };
+      v.build = () => buildVillage(v);
+    }
   }
   villageCache.set(k, v);
   return v;
 }
 function villagesNear(x0, z0, x1, z1, margin) {
   const out = [];
+  if (dim !== 'overworld') return out;
   for (let gx = Math.floor((x0 - margin) / VCELL); gx <= Math.floor((x1 + margin) / VCELL); gx++)
     for (let gz = Math.floor((z0 - margin) / VCELL); gz <= Math.floor((z1 + margin) / VCELL); gz++) {
       const v = villageInCell(gx, gz);
@@ -723,12 +804,213 @@ function villageLoot(x, y, z) {
   return arr;
 }
 
+// ---------- 네더: 용암 바다 위의 거대한 동굴 ----------
+function genNether(cx, cz, data) {
+  const x0 = cx * CS, z0 = cz * CS;
+  for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
+    const wx = x0 + x, wz = z0 + z;
+    for (let y = 0; y < CH; y++) {
+      let id;
+      if (y === 0 || y === CH - 1 || ((y === 1 || y === CH - 2) && hash2(wx * 31 + y, wz, 43) < 0.5)) id = B.BEDROCK;
+      else {
+        let d = noise.n3(wx * 0.04, y * 0.07, wz * 0.04) * 0.8 + noise2.n3(wx * 0.1, y * 0.12, wz * 0.1) * 0.25;
+        if (y < 30) d += (30 - y) * 0.04;
+        if (y > 72) d += (y - 72) * 0.05;
+        id = d > 0.12 ? B.NETHERRACK : y <= 24 ? B.LAVA : B.AIR;
+      }
+      data[vidx(x, y, z)] = id;
+    }
+    if (fbm(noise2, wx * 0.03, wz * 0.03, 2) > 0.12) for (let y = 20; y < 44; y++) {
+      const i = vidx(x, y, z);
+      if (data[i] === B.NETHERRACK && data[vidx(x, y + 1, z)] === B.AIR) {
+        data[i] = B.SOUL_SAND;
+        if (data[vidx(x, y - 1, z)] === B.NETHERRACK) data[vidx(x, y - 1, z)] = B.SOUL_SAND;
+      }
+    }
+  }
+  const r = mulberry32(Math.imul(cx, 73856093) ^ Math.imul(cz, 19349663) ^ SEED ^ 0x7777);
+  // 천장에 매달린 발광석
+  for (let k = 0; k < 5; k++) {
+    const x = r() * CS | 0, z = r() * CS | 0;
+    let y = 90; while (y > 50 && !(data[vidx(x, y, z)] === B.NETHERRACK && data[vidx(x, y - 1, z)] === B.AIR)) y--;
+    if (y <= 50) continue;
+    let gx = x, gy = y - 1, gz = z;
+    for (let s = 0; s < 14; s++) {
+      if (gx >= 0 && gx < CS && gz >= 0 && gz < CS && data[vidx(gx, gy, gz)] === B.AIR) data[vidx(gx, gy, gz)] = B.GLOWSTONE;
+      gx += (r() * 3 | 0) - 1; gz += (r() * 3 | 0) - 1; gy -= r() < 0.6 ? 1 : 0;
+    }
+  }
+  // 석영 광석
+  for (let v = 0; v < 12; v++) {
+    let x = r() * CS | 0, y = 10 + (r() * 80 | 0), z = r() * CS | 0;
+    for (let k = 0; k < 8; k++) {
+      if (x >= 0 && x < CS && z >= 0 && z < CS && y > 0 && y < CH - 1 && data[vidx(x, y, z)] === B.NETHERRACK) data[vidx(x, y, z)] = B.QUARTZ_ORE;
+      x += (r() * 3 | 0) - 1; y += (r() * 3 | 0) - 1; z += (r() * 3 | 0) - 1;
+    }
+  }
+}
+// ---------- 엔드: 공허 위에 뜬 섬, 흑요석 기둥, 가운데 귀환 차원문 ----------
+function endPillars() {
+  const out = [];
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4 + 0.2;
+    out.push({ i, x: Math.round(Math.cos(a) * 34), z: Math.round(Math.sin(a) * 34), r: 2 + ((i * 7) % 3), h: 64 + ((i * 37 + (SEED & 7)) % 5) * 3 });
+  }
+  return out;
+}
+const END_TOP = 48;
+function genEnd(cx, cz, data) {
+  const x0 = cx * CS, z0 = cz * CS;
+  for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
+    const wx = x0 + x, wz = z0 + z, d = Math.hypot(wx, wz);
+    const R = 64 + fbm(noise, wx * 0.02, wz * 0.02, 2) * 16;
+    if (d >= R) continue;
+    const top = d < 8 ? END_TOP : END_TOP + Math.round(fbm(noise2, wx * 0.03, wz * 0.03, 2) * 3);
+    const depth = Math.floor((1 - d / R) * 28) + 2;
+    for (let y = Math.max(1, top - depth); y <= top; y++) data[vidx(x, y, z)] = B.END_STONE;
+  }
+  for (const pl of endPillars()) for (let dz = -pl.r; dz <= pl.r; dz++) for (let dx = -pl.r; dx <= pl.r; dx++) {
+    if (dx * dx + dz * dz > pl.r * pl.r + pl.r) continue;
+    const lx = pl.x + dx - x0, lz = pl.z + dz - z0;
+    if (lx < 0 || lx >= CS || lz < 0 || lz >= CS) continue;
+    for (let y = END_TOP - 8; y <= pl.h; y++) data[vidx(lx, y, lz)] = B.OBSIDIAN;
+    if (dx === 0 && dz === 0) data[vidx(lx, pl.h + 1, lz)] = B.BEDROCK;
+  }
+  // 가운데 귀환 차원문 (드래곤을 물리치면 안쪽이 열림)
+  for (let dz = -4; dz <= 4; dz++) for (let dx = -4; dx <= 4; dx++) {
+    const lx = dx - x0, lz = dz - z0;
+    if (lx < 0 || lx >= CS || lz < 0 || lz >= CS) continue;
+    const dd = Math.hypot(dx, dz);
+    if (dd > 3.5) continue;
+    data[vidx(lx, END_TOP - 1, lz)] = B.BEDROCK;
+    data[vidx(lx, END_TOP, lz)] = dd >= 2.5 ? B.BEDROCK : B.AIR;
+    for (let y = END_TOP + 1; y < END_TOP + 5; y++) data[vidx(lx, y, lz)] = B.AIR;
+    if (dx === 0 && dz === 0) for (let y = END_TOP; y <= END_TOP + 3; y++) data[vidx(lx, y, lz)] = B.BEDROCK;
+  }
+}
+// ---------- 네더 요새: 네더 벽돌 다리가 열십자로 뻗고 가운데 방에 상자 ----------
+const FCELL = 192;
+const fortressCache = new Map();
+function fortressInCell(gx, gz) {
+  const k = gx + ',' + gz;
+  if (fortressCache.has(k)) return fortressCache.get(k);
+  let f = null;
+  if (hash2(gx, gz, 201) < 0.6) {
+    f = { x: gx * FCELL + 40 + Math.floor(hash2(gx, gz, 202) * (FCELL - 80)), z: gz * FCELL + 40 + Math.floor(hash2(gx, gz, 203) * (FCELL - 80)),
+      y: 46, blocks: null, chests: [], fortress: true };
+    f.build = () => buildFortress(f);
+    f.loot = fortressLoot;
+  }
+  fortressCache.set(k, f);
+  return f;
+}
+function buildFortress(f) {
+  if (f.blocks) return f.blocks;
+  const list = [], put = (x, y, z, id) => list.push([x, y, z, id]), NB = B.NETHER_BRICK, L = 44;
+  for (const axis of [0, 1]) for (let t = -L; t <= L; t++) for (let w = -2; w <= 2; w++) {
+    const x = f.x + (axis ? w : t), z = f.z + (axis ? t : w);
+    put(x, f.y, z, NB);
+    if (Math.abs(w) === 2) put(x, f.y + 1, z, NB);
+    else for (let h = 1; h <= 4; h++) put(x, f.y + h, z, B.AIR);
+    if (w === 0 && t % 11 === 0) for (let y = 20; y < f.y; y++) put(x, y, z, NB); // 받침 기둥
+  }
+  // 가운데 방 9×9
+  for (let dx = -4; dx <= 4; dx++) for (let dz = -4; dz <= 4; dz++) for (let h = 0; h <= 6; h++) {
+    const edge = Math.abs(dx) === 4 || Math.abs(dz) === 4, door = (Math.abs(dx) <= 1 || Math.abs(dz) <= 1) && h >= 1 && h <= 3;
+    put(f.x + dx, f.y + h, f.z + dz, h === 0 || h === 6 || (edge && !door) ? NB : B.AIR);
+  }
+  put(f.x + 3, f.y + 1, f.z + 3, B.CHEST); f.chests.push([f.x + 3, f.y + 1, f.z + 3]);
+  put(f.x - 3, f.y + 1, f.z - 3, B.CHEST); f.chests.push([f.x - 3, f.y + 1, f.z - 3]);
+  f.blocks = list;
+  return list;
+}
+function fortressLoot(x, y, z) {
+  const r = mulberry32(Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791) ^ SEED ^ 0x4444);
+  const arr = new Array(27).fill(null);
+  const add = (id, lo, hi) => { const n = lo + (r() * (hi - lo + 1) | 0); if (n) arr[r() * 27 | 0] = { id, count: n, dur: ITEMS[id].dur }; };
+  add(I.GOLD_INGOT, 1, 5); add(I.IRON_INGOT, 1, 5); add(B.OBSIDIAN, 2, 6); add(I.BLAZE_ROD, 0, 2);
+  if (r() < 0.4) add(I.DIAMOND, 1, 3);
+  if (r() < 0.3) add(I.FLINT_STEEL, 1, 1);
+  return arr;
+}
+function fortressesNear(x0, z0, x1, z1, margin) {
+  const out = [];
+  for (let gx = Math.floor((x0 - margin) / FCELL); gx <= Math.floor((x1 + margin) / FCELL); gx++)
+    for (let gz = Math.floor((z0 - margin) / FCELL); gz <= Math.floor((z1 + margin) / FCELL); gz++) {
+      const f = fortressInCell(gx, gz);
+      if (f) out.push(f);
+    }
+  return out;
+}
+// ---------- 엔드 요새: 지하 방 안의 엔드 차원문 틀 (월드마다 3곳) ----------
+const strongholdCache = { seed: null, list: [] };
+function strongholds() {
+  if (strongholdCache.seed === SEED) return strongholdCache.list;
+  const base = hash2(1, 2, 301) * Math.PI * 2, list = [];
+  for (let i = 0; i < 3; i++) {
+    const a = base + i * Math.PI * 2 / 3, d = 640 + hash2(i, 7, 302) * 320;
+    const st = { x: Math.round(Math.cos(a) * d), z: Math.round(Math.sin(a) * d), y: 20, blocks: null, chests: [] };
+    st.build = () => buildStronghold(st);
+    st.loot = strongholdLoot;
+    list.push(st);
+  }
+  strongholdCache.seed = SEED; strongholdCache.list = list;
+  return list;
+}
+function buildStronghold(st) {
+  if (st.blocks) return st.blocks;
+  const list = [], put = (x, y, z, id) => list.push([x, y, z, id]), SB = B.STONE_BRICK;
+  for (let dx = -7; dx <= 7; dx++) for (let dz = -7; dz <= 7; dz++) for (let h = -2; h <= 6; h++) {
+    const edge = Math.abs(dx) === 7 || Math.abs(dz) === 7 || h <= -1 || h === 6;
+    put(st.x + dx, st.y + h, st.z + dz, edge ? SB : B.AIR);
+  }
+  // 차원문 틀 12개 (가운데 3×3 아래는 용암)
+  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+    const ax = Math.abs(dx), az = Math.abs(dz);
+    if ((ax === 2) !== (az === 2)) put(st.x + dx, st.y, st.z + dz, hash2(st.x + dx, st.z + dz, 303) < 0.12 ? B.EPF_EYE : B.EPF);
+    else if (ax <= 1 && az <= 1) put(st.x + dx, st.y - 1, st.z + dz, B.LAVA);
+  }
+  for (const [dx, dz] of [[-6, -6], [6, -6], [-6, 6], [6, 6]]) put(st.x + dx, st.y, st.z + dz, B.TORCH);
+  put(st.x - 6, st.y, st.z, B.CHEST); st.chests.push([st.x - 6, st.y, st.z]);
+  st.blocks = list;
+  return list;
+}
+function strongholdLoot(x, y, z) {
+  const r = mulberry32(Math.imul(x, 73856093) ^ Math.imul(z, 83492791) ^ SEED ^ 0x5555);
+  const arr = new Array(27).fill(null);
+  const add = (id, lo, hi) => { const n = lo + (r() * (hi - lo + 1) | 0); if (n) arr[r() * 27 | 0] = { id, count: n, dur: ITEMS[id].dur }; };
+  add(I.ENDER_PEARL, 1, 3); add(I.BREAD, 1, 4); add(I.IRON_INGOT, 1, 5); add(I.EYE_OF_ENDER, 0, 2);
+  if (r() < 0.3) add(I.DIAMOND, 1, 2);
+  return arr;
+}
+function structuresNear(x0, z0, x1, z1) {
+  if (dim === 'nether') return fortressesNear(x0, z0, x1, z1, 60);
+  if (dim !== 'overworld') return [];
+  const out = villagesNear(x0, z0, x1, z1, 40);
+  for (const st of strongholds()) if (st.x + 8 >= x0 && st.x - 8 <= x1 && st.z + 8 >= z0 && st.z - 8 <= z1) out.push(st);
+  return out;
+}
+
 const chunks = new Map();
 const key = (cx, cz) => cx + ',' + cz;
 const vidx = (x, y, z) => (y * CS + z) * CS + x;
 
 function generateChunk(cx, cz) {
   const data = new Uint8Array(CS * CS * CH);
+  const x0 = cx * CS, z0 = cz * CS;
+  if (dim === 'nether') genNether(cx, cz, data);
+  else if (dim === 'end') genEnd(cx, cz, data);
+  else genOverworld(cx, cz, data);
+
+  // 구조물 (마을, 요새, 엔드 요새)
+  const structs = structuresNear(x0, z0, x0 + CS - 1, z0 + CS - 1);
+  for (const st of structs) for (const [bx, by, bz, id] of st.build()) {
+    const lx = bx - x0, lz = bz - z0;
+    if (lx >= 0 && lx < CS && lz >= 0 && lz < CS && by > 0 && by < CH) data[vidx(lx, by, lz)] = id;
+  }
+  return finishChunk(cx, cz, data, structs);
+}
+function genOverworld(cx, cz, data) {
   const x0 = cx * CS, z0 = cz * CS;
   const PAD = 3, W = CS + PAD * 2;
   const heights = new Int16Array(W * W), biomes = new Uint8Array(W * W);
@@ -752,7 +1034,8 @@ function generateChunk(cx, cz) {
         else if (desert && y > h - 7) id = B.SANDSTONE;
         else if (y > h - dirtDepth) id = beach ? B.SAND : B.DIRT;
         else id = B.STONE;
-        if (y > 1 && y < h - 4 && noiseCave.n3(wx * 0.055, y * 0.09, wz * 0.055) > 0.42) id = B.AIR;
+        if (y > 1 && y < h - 4 && noiseCave.n3(wx * 0.055, y * 0.09, wz * 0.055) > 0.42) id = y <= 8 ? B.LAVA : B.AIR;
+        else if (y >= h - 1 && h < SEA - 3 && hash2(wx, wz, 31) < 0.35) id = B.GRAVEL;
       } else if (y <= SEA) id = (bio === BIO.SNOW && y === SEA) ? B.ICE : B.WATER;
       data[vidx(x, y, z)] = id;
     }
@@ -824,24 +1107,19 @@ function generateChunk(cx, cz) {
     }
   }
 
-  // 마을 건물
-  for (const v of villagesNear(x0, z0, x0 + CS - 1, z0 + CS - 1, 40)) {
-    for (const [bx, by, bz, id] of buildVillage(v)) {
-      const lx = bx - x0, lz = bz - z0;
-      if (lx >= 0 && lx < CS && lz >= 0 && lz < CS && by > 0 && by < CH) data[vidx(lx, by, lz)] = id;
-    }
-  }
-
+}
+function finishChunk(cx, cz, data, structs) {
+  const x0 = cx * CS, z0 = cz * CS;
   const e = edits.get(key(cx, cz));
   if (e) for (const [i, id] of e) {
     data[i] = id;
   }
 
-  // 마을 상자는 처음 만들어질 때 한 번만 내용물을 채움
-  for (const v of villagesNear(x0, z0, x0 + CS - 1, z0 + CS - 1, 40)) for (const [hx, hy, hz] of v.chests) {
+  // 구조물 상자는 처음 만들어질 때 한 번만 내용물을 채움
+  for (const st of structs) for (const [hx, hy, hz] of st.chests) {
     const lx = hx - x0, lz = hz - z0;
     if (lx < 0 || lx >= CS || lz < 0 || lz >= CS || data[vidx(lx, hy, lz)] !== B.CHEST) continue;
-    if (!chests.has(ckey(hx, hy, hz))) chests.set(ckey(hx, hy, hz), villageLoot(hx, hy, hz));
+    if (!chests.has(ckey(hx, hy, hz))) chests.set(ckey(hx, hy, hz), st.loot(hx, hy, hz));
   }
   for (let i = 0; i < data.length; i++) {
     const id = data[i];
@@ -976,14 +1254,14 @@ function initChunkLight(c) {
   lightSpread(qb, false, touched);
   for (const t of touched) if (t !== c && t.meshed) t.dirty = true;
 }
-let skyDimNow = 0;
+let skyDimNow = 0, ambientNow = 0.05;
 const lightCurve = l => l <= 0 ? 0 : Math.pow(0.86, 15 - l);
 function brightnessAt(x, y, z) {
   if (y >= CH) return 1;
   const c = chunkOf(Math.floor(x), Math.floor(z));
   if (!c || !c.sky || y < 0) return 1;
   const i = vidx(Math.floor(x) - c.cx * CS, Math.floor(y), Math.floor(z) - c.cz * CS);
-  return Math.max(lightCurve(Math.max(0, c.sky[i] - skyDimNow)), lightCurve(c.blk[i]), 0.05);
+  return Math.max(lightCurve(Math.max(0, c.sky[i] - skyDimNow)), lightCurve(c.blk[i]), ambientNow);
 }
 
 function getBlock(x, y, z) {
@@ -1005,8 +1283,13 @@ function setBlock(x, y, z, id, batch) {
   const cx = Math.floor(x / CS), cz = Math.floor(z / CS);
   const k = key(cx, cz);
   const c = chunks.get(k);
-  if (!c) return;
   const i = vidx(x - cx * CS, y, z - cz * CS);
+  if (!c) {
+    let m0 = edits.get(k);
+    if (!m0) { m0 = new Map(); edits.set(k, m0); }
+    m0.set(i, id); scheduleSave();
+    return;
+  }
   c.data[i] = id;
   let m = edits.get(k);
   if (!m) { m = new Map(); edits.set(k, m); }
@@ -1176,6 +1459,32 @@ atlasCanvas.width = TILE * NT; atlasCanvas.height = TILE;
   const doorWood = (x, y) => (x === 0 || x === 15 || y === 0 || y === 15) ? nz([110, 78, 40], 10) : (x % 5 === 2 ? nz([130, 94, 50], 10) : nz([160, 118, 66], 14));
   tile(T.DOOR_BOTTOM, (x, y) => (y === 7 || y === 8) && x > 2 && x < 13 ? nz([110, 78, 40], 10) : doorWood(x, y));
   tile(T.DOOR_TOP, (x, y) => (x >= 3 && x <= 12 && y >= 3 && y <= 11 && x !== 7 && x !== 8 && y !== 7) ? [0, 0, 0, 0] : doorWood(x, y));
+  tile(T.LAVA, (x, y) => { const v = Math.sin(x * 0.9 + y * 0.4) + Math.cos(y * 0.8 - x * 0.3); return v > 0.9 ? nz([255, 200, 80], 20) : v < -0.8 ? nz([170, 50, 10], 16) : nz([230, 110, 20], 24); });
+  tile(T.OBSIDIAN, () => rnd() < 0.12 ? nz([70, 46, 110], 20) : nz([22, 16, 34], 10));
+  tile(T.GRAVEL, () => { const r = rnd(); return r < 0.2 ? nz([90, 86, 84], 16) : r < 0.35 ? nz([170, 164, 158], 16) : nz([128, 122, 118], 20); });
+  tile(T.NETHERRACK, () => { const r = rnd(); return r < 0.2 ? nz([80, 26, 26], 14) : r < 0.35 ? nz([150, 64, 58], 14) : nz([112, 40, 40], 18); });
+  tile(T.SOUL_SAND, (x, y) => (((x + 3) % 6 < 2 && (y + 2) % 5 < 2) ? nz([46, 34, 26], 10) : nz([84, 64, 48], 18)));
+  tile(T.GLOWSTONE, (x, y) => (x % 5 === 0 || y % 5 === 0) ? nz([170, 120, 60], 16) : rnd() < 0.3 ? nz([255, 246, 190], 10) : nz([236, 196, 110], 20));
+  tile(T.QUARTZ_ORE, (x, y) => ((x * 7 + y * 3) % 9 === 0 || (x * 5 + y * 11) % 13 === 0) ? nz([236, 230, 220], 10) : nz([112, 40, 40], 18));
+  tile(T.NETHER_BRICK, (x, y) => {
+    const row = y >> 2, off = (row % 2) * 4;
+    if (y % 4 === 3 || ((x + off) % 8) === 7) return nz([30, 14, 18], 8);
+    return nz([62, 30, 34], 14);
+  });
+  tile(T.PORTAL, (x, y) => { const v = Math.sin(x * 0.7 + Math.cos(y * 0.5) * 2) + Math.cos(y * 0.6 - x * 0.2); const c = nz(v > 0.6 ? [190, 110, 255] : [110, 30, 200], 24); return [c[0], c[1], c[2], 220]; });
+  tile(T.END_STONE, () => { const r = rnd(); return r < 0.15 ? nz([200, 200, 140], 12) : nz([224, 224, 168], 14); });
+  tile(T.EPF_TOP, (x, y) => {
+    const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
+    return d < 3 ? nz([30, 60, 50], 10) : d < 4 ? nz([60, 110, 90], 10) : nz([80, 130, 110], 16);
+  });
+  tile(T.EPF_SIDE, (x, y) => y < 3 ? nz([80, 130, 110], 14) : nz([224, 224, 168], 14));
+  tile(T.EPF_EYE_TOP, (x, y) => {
+    const d = Math.hypot(x - 7.5, y - 7.5), m = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
+    return d < 1.5 ? [10, 30, 20] : d < 3.2 ? nz([60, 200, 120], 16) : m < 4 ? nz([60, 110, 90], 10) : nz([80, 130, 110], 16);
+  });
+  tile(T.END_PORTAL, () => { const r = rnd(); return r < 0.05 ? nz([200, 230, 255], 30) : r < 0.1 ? nz([80, 200, 180], 30) : nz([12, 14, 26], 8); });
+  tile(T.DRAGON_EGG, () => rnd() < 0.1 ? nz([120, 40, 160], 20) : nz([22, 12, 28], 8));
+  tile(T.QUARTZ_BLOCK, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15) ? nz([210, 204, 196], 6) : nz([238, 234, 228], 8));
   tile(T.CHEST_TOP, (x, y) => (x === 0 || y === 0 || x === 15 || y === 15) ? nz([90, 60, 30], 10) : nz([168, 118, 58], 16));
   tile(T.CHEST_FRONT, (x, y) => {
     if (x === 0 || y === 0 || x === 15 || y === 15 || y === 6) return nz([90, 60, 30], 10);
@@ -1288,6 +1597,37 @@ function drawItemIcon(g, id) {
       ['', '', '', '', '', '', '', '...###....###', '...###....###', '...###....###', '..####....####', '..####....####'],
     ][info.armor];
     P.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '#') px(x, y + 2, (x + y) % 5 === 0 ? c.map(v => v - 40) : c, 14); }));
+  } else if (ITEMS[id].bucket !== undefined) {
+    const fill = { [B.WATER]: [60, 100, 220], [B.LAVA]: [240, 120, 20] }[ITEMS[id].bucket];
+    for (let y = 4; y < 14; y++) { const inset = (y - 4) * 0.25; for (let x = Math.ceil(3 + inset); x <= Math.floor(12 - inset); x++) {
+      const edge = x <= Math.ceil(3 + inset) || x >= Math.floor(12 - inset) || y === 13;
+      px(x, y, edge ? [120, 120, 120] : (fill && y < 7) ? fill : [180, 180, 180], 10);
+    } }
+    for (let x = 4; x <= 11; x++) px(x, 2 + (Math.abs(x - 7.5) > 2.5 ? 1 : 0), [110, 110, 110]);
+  } else if (id === I.FLINT || id === I.FLINT_STEEL) {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const dx = x - (id === I.FLINT ? 7.5 : 10), dy = y - (id === I.FLINT ? 8 : 10);
+      if (Math.abs(dx) + Math.abs(dy) * 0.8 < (id === I.FLINT ? 6 : 3.5)) px(x, y, [60, 60, 64], 14);
+    }
+    if (id === I.FLINT_STEEL) for (let a = 0; a < 20; a++) { const t = a / 20 * 6.283; px(Math.round(6 + 3.5 * Math.cos(t)), Math.round(6 + 3.5 * Math.sin(t)), [150, 150, 150], 8); }
+  } else if (id === I.QUARTZ || id === I.GHAST_TEAR) {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const tear = id === I.GHAST_TEAR, dx = x - 7.5, dy = y - (tear ? 9 : 8);
+      const inside = tear ? (dx * dx + dy * dy < 16 && dy > -1) || (Math.abs(dx) < (dy + 6) * 0.6 && dy <= -1 && dy > -7) : Math.abs(dx) + Math.abs(dy) * 0.6 < 5;
+      if (inside) px(x, y, tear ? (dx < 0 && dy < 0 ? [240, 250, 255] : [180, 220, 240]) : (dx < 0 ? [250, 248, 240] : [210, 204, 196]), 8);
+    }
+  } else if (id === I.BLAZE_ROD) {
+    for (let i = 2; i < 14; i++) { px(14 - i, i, [250, 200, 60]); px(15 - i, i, [220, 150, 30]); }
+  } else if (id === I.BLAZE_POWDER) {
+    for (let k = 0; k < 40; k++) { const a = r() * 6.283, d = r() * 5; px(Math.round(7.5 + Math.cos(a) * d), Math.round(9 + Math.sin(a) * d * 0.7), r() < 0.5 ? [250, 190, 50] : [230, 110, 20], 10); }
+  } else if (id === I.ENDER_PEARL || id === I.EYE_OF_ENDER) {
+    const eye = id === I.EYE_OF_ENDER;
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const d = Math.hypot(x - 7.5, y - 7.5);
+      if (d < 6) px(x, y, eye && d < 2 ? [20, 40, 30] : eye && Math.abs(y - 7.5) < 2.2 ? [150, 220, 120] : (x < 7 && y < 7 ? [120, 230, 200] : [30, 110, 100]), 10);
+    }
+  } else if (id === I.NETHER_BRICK_ITEM) {
+    for (let y = 5; y < 11; y++) for (let x = 2; x < 14; x++) px(x, y, y === 5 ? [90, 44, 50] : [62, 30, 34], 10);
   } else if (id === I.DOOR) {
     for (let y = 1; y < 15; y++) for (let x = 4; x < 12; x++) {
       const win = y >= 3 && y <= 6 && x >= 6 && x <= 9;
@@ -1401,7 +1741,7 @@ void main() {
 }`;
 const CHUNK_FS = `precision mediump float;
 uniform sampler2D map; uniform float skyDim; uniform vec3 fogColor; uniform float fogNear; uniform float fogFar;
-uniform float opacity; uniform float alphaTest;
+uniform float opacity; uniform float alphaTest; uniform float ambient;
 varying vec2 vUv; varying float vShade; varying vec2 vLight; varying float vDepth;
 float curve(float l) { return l <= 0.01 ? 0.0 : pow(0.86, 15.0 - l); }
 void main() {
@@ -1410,7 +1750,7 @@ void main() {
   float s = max(vLight.x * 15.0 - skyDim, 0.0);
   float b = vLight.y * 15.0;
   vec3 lc = max(vec3(curve(s)), curve(b) * vec3(1.0, 0.86, 0.66));
-  lc = max(lc, vec3(0.05));
+  lc = max(lc, vec3(ambient));
   vec3 col = t.rgb * vShade * lc;
   gl_FragColor = vec4(mix(col, fogColor, smoothstep(fogNear, fogFar, vDepth)), t.a * opacity);
 }`;
@@ -1418,7 +1758,7 @@ function chunkMat(o) {
   return new THREE.RawShaderMaterial({
     vertexShader: CHUNK_VS, fragmentShader: CHUNK_FS,
     uniforms: { map: { value: atlasTex }, skyDim: { value: 0 }, fogColor: { value: new THREE.Color() },
-      fogNear: { value: 50 }, fogFar: { value: 90 }, opacity: { value: o.opacity || 1 }, alphaTest: { value: o.alphaTest || 0 } },
+      fogNear: { value: 50 }, fogFar: { value: 90 }, opacity: { value: o.opacity || 1 }, alphaTest: { value: o.alphaTest || 0 }, ambient: { value: 0.05 } },
     transparent: !!o.transparent, depthWrite: o.depthWrite !== false, side: o.side || THREE.FrontSide,
   });
 }
@@ -1511,6 +1851,7 @@ function hasNeighbors(cx, cz) {
 function faceVisible(id, n) {
   if (n === B.AIR) return true;
   if (id === B.WATER) return false;
+  if (id === B.LAVA) return TRANSP[n] && !LIQUID[n];
   if (!TRANSP[n]) return false;
   if (id === B.LEAVES) return true;
   return n !== id;
@@ -1559,13 +1900,13 @@ function buildMesh(c) {
       const tile = blk.tex[f.side];
       const base = out.pos.length / 3;
       const ao = [1, 1, 1, 1];
-      const waterTop = id === B.WATER && fi === 3 ? 0.1 : 0;
+      const waterTop = LIQUID[id] && fi === 3 ? 0.1 : 0;
       for (let k = 0; k < 4; k++) {
         const cr = f.corners[k];
         out.pos.push(x + cr[0], y + cr[1] - (cr[1] ? waterTop : 0), z + cr[2]);
         out.uv.push((tile + e + cr[3] * (1 - 2 * e)) / NT, e + cr[4] * (1 - 2 * e));
         const o = f.ao[k];
-        if (id !== B.WATER) {
+        if (!LIQUID[id]) {
           const s1 = OCC[pad[p + o[0]]], s2 = OCC[pad[p + o[1]]], cc = OCC[pad[p + o[2]]];
           ao[k] = AO_CURVE[s1 && s2 ? 0 : 3 - (s1 + s2 + cc)];
         }
@@ -1812,8 +2153,13 @@ function physics(dt) {
   if (!chunkReady(p.x, p.z)) return;
   const wasInWater = player.inWater;
   const feet = getBlock(Math.floor(p.x), Math.floor(p.y + 0.2), Math.floor(p.z));
-  player.inWater = feet === B.WATER || getBlock(Math.floor(p.x), Math.floor(p.y + 0.9), Math.floor(p.z)) === B.WATER;
-  player.headInWater = getBlock(Math.floor(p.x), Math.floor(p.y + EYE), Math.floor(p.z)) === B.WATER;
+  const mid = getBlock(Math.floor(p.x), Math.floor(p.y + 0.9), Math.floor(p.z)), head = getBlock(Math.floor(p.x), Math.floor(p.y + EYE), Math.floor(p.z));
+  player.inLava = feet === B.LAVA || mid === B.LAVA;
+  player.inWater = feet === B.WATER || mid === B.WATER || player.inLava;
+  player.headInWater = head === B.WATER;
+  player.headInLava = head === B.LAVA;
+  if (feet === B.WATER || mid === B.WATER) player.burn = 0;
+  const onSoul = getBlock(Math.floor(p.x), Math.floor(p.y - 0.05), Math.floor(p.z)) === B.SOUL_SAND;
 
   let fwd = 0, str = 0;
   if (keys.has('KeyW')) fwd += 1;
@@ -1829,7 +2175,8 @@ function physics(dt) {
   const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
   const sprint = shift && !player.flying && (mode !== 'survival' || player.food > 6);
   let speed = player.flying ? 10 : (sprint ? 5.8 : 4.3);
-  if (player.inWater && !player.flying) speed *= 0.55;
+  if (player.inWater && !player.flying) speed *= player.inLava ? 0.35 : 0.55;
+  if (onSoul && !player.flying) speed *= 0.5;
   const tx = (-sy * fwd + cy * str) * speed;
   const tz = (-cy * fwd - sy * str) * speed;
   const accel = player.flying ? 10 : player.onGround ? 16 : player.inWater ? 6 : 4;
@@ -1841,10 +2188,10 @@ function physics(dt) {
     const ty = (jump ? 9 : 0) - (shift ? 9 : 0);
     player.vel.y += (ty - player.vel.y) * Math.min(1, dt * 10);
   } else if (player.inWater) {
-    player.vel.y -= 10 * dt;
-    player.vel.y *= Math.pow(0.1, dt);
-    if (jump) player.vel.y = Math.min(player.vel.y + 30 * dt, 3.2);
-    player.vel.y = Math.max(player.vel.y, -3);
+    player.vel.y -= (player.inLava ? 6 : 10) * dt;
+    player.vel.y *= Math.pow(player.inLava ? 0.03 : 0.1, dt);
+    if (jump) player.vel.y = Math.min(player.vel.y + (player.inLava ? 20 : 30) * dt, player.inLava ? 2 : 3.2);
+    player.vel.y = Math.max(player.vel.y, player.inLava ? -1.5 : -3);
   } else {
     if (jump && player.onGround) { player.vel.y = 8.6; exhaust(sprint ? 0.2 : 0.05); }
     player.vel.y -= 14 * dt; // 중력은 이동 전후로 반씩 (프레임 속도와 무관하게 점프 높이 1.32칸)
@@ -1875,7 +2222,11 @@ function physics(dt) {
     }
     player.peakY = p.y;
   }
-  if (p.y < -20) { const s = findSpawn(); p.set(s[0], s[1] + 10, s[2]); player.vel.set(0, 0, 0); player.peakY = p.y; }
+  if (p.y < -30) {
+    if (dim === 'overworld') { const s = findSpawn(); p.set(s[0], s[1] + 10, s[2]); player.vel.set(0, 0, 0); player.peakY = p.y; }
+    else if (mode === 'creative') { p.y = 80; player.vel.y = 0; player.flying = true; }
+    else { player.invuln = 0; damagePlayer(4, null, '세상 밖으로 떨어졌습니다', true); }
+  }
 }
 
 // 배고픔: 활동하면 피로(exh)가 쌓이고, 4마다 포만감→배고픔 순으로 1씩 줄어듦
@@ -1895,6 +2246,16 @@ function hungerTick(dt) {
   player.foodT = 0;
   if (player.food >= 18 && player.hp < 20) { player.hp++; exhaust(3); updateHearts(); }
   else if (player.food <= 0 && player.hp > 1) { player.invuln = 0; damagePlayer(1, null, '굶주렸습니다', true); }
+}
+// 용암에 닿으면 큰 피해를 입고 몇 초간 불이 붙음 (물에 들어가면 꺼짐)
+function fireTick(dt) {
+  if (player.inLava) { player.burn = 5; damagePlayer(4, null, '용암에 빠졌습니다'); }
+  else if (player.burn > 0) {
+    player.burn -= dt;
+    player.burnT = (player.burnT || 0) + dt;
+    if (player.burnT >= 1) { player.burnT = 0; player.invuln = 0; damagePlayer(1, null, '불에 타 버렸습니다'); }
+  }
+  document.getElementById('fire').style.opacity = player.burn > 0 ? 0.55 : 0;
 }
 function cactusCheck() {
   const p = player.pos, r = player.hw + 0.06;
@@ -1943,16 +2304,8 @@ function die(cause) {
   writeSave();
 }
 document.getElementById('respawn').addEventListener('click', () => {
-  let atBed = false;
-  if (spawnPoint) {
-    const [bx, by, bz] = spawnPoint;
-    player.pos.set(bx + 0.5, by + 0.6, bz + 0.5);
-    preload();
-    if (getBlock(bx, by, bz) === B.BED) atBed = true;
-    else { spawnPoint = null; toast('침대가 없어져서 처음 장소에서 다시 태어났습니다'); }
-  }
-  if (!atBed) { const s = findSpawn(); player.pos.set(s[0], s[1], s[2]); preload(); }
-  player.vel.set(0, 0, 0); player.peakY = player.pos.y;
+  if (dim !== 'overworld') switchDim('overworld', 0.5, 70, 0.5);
+  respawnAtSpawnPoint();
   player.hp = 20; player.dead = false; player.food = 20; player.sat = 5;
   document.getElementById('death').hidden = true;
   ui = null;
@@ -2153,6 +2506,23 @@ Object.assign(MOBTEX, {
     return [186, 136, 104];
   }, 16),
   vSkin: makeCanvasTex(8, 8, () => [186, 136, 104], 17),
+  pSkin: makeCanvasTex(8, 8, (x, y) => ((x * 5 + y * 3) % 7 === 0) ? [110, 150, 90] : [226, 150, 146], 18),
+  pFace: makeCanvasTex(8, 8, (x, y) => {
+    if (y === 3 && (x === 1 || x === 6)) return [240, 60, 60];
+    if (y >= 4 && y <= 6 && x >= 2 && x <= 5) return (y === 5 && (x === 2 || x === 5)) ? [120, 50, 60] : [236, 170, 170];
+    return (x * 5 + y * 3) % 7 === 0 ? [110, 150, 90] : [226, 150, 146];
+  }, 19),
+  pCloth: makeCanvasTex(8, 8, () => [110, 84, 60], 20),
+  gold: makeCanvasTex(4, 4, () => [246, 204, 60], 21),
+  eSkin: makeCanvasTex(8, 8, () => [22, 20, 26], 22),
+  eFace: makeCanvasTex(8, 8, (x, y) => (y === 4 && (x <= 2 || x >= 5)) ? (x === 1 || x === 6 ? [240, 150, 255] : [200, 70, 240]) : [22, 20, 26], 23),
+  bSkin: makeCanvasTex(8, 8, () => [240, 190, 60], 24),
+  bFace: makeCanvasTex(8, 8, (x, y) => (y === 3 && (x === 1 || x === 2 || x === 5 || x === 6)) ? [60, 30, 10] : (y === 6 && x > 1 && x < 6) ? [150, 80, 20] : [240, 190, 60], 25),
+  gSkin: makeCanvasTex(8, 8, () => [236, 236, 236], 26),
+  gFace: makeCanvasTex(8, 8, (x, y) => ((y === 2 && (x === 1 || x === 2 || x === 5 || x === 6)) || (y === 5 && x >= 3 && x <= 4)) ? [90, 90, 90] : [236, 236, 236], 27),
+  dSkin: makeCanvasTex(8, 8, (x, y) => (y % 4 === 0) ? [44, 40, 52] : [24, 20, 28], 28),
+  dFace: makeCanvasTex(8, 8, (x, y) => (y === 3 && (x === 1 || x === 6)) ? [230, 120, 255] : (y % 4 === 0) ? [44, 40, 52] : [24, 20, 28], 29),
+  crystal: makeCanvasTex(4, 4, () => [236, 140, 236], 30),
   creeperFace: makeCanvasTex(8, 8, (x, y) => {
     if ((y === 2 || y === 3) && (x === 1 || x === 2 || x === 5 || x === 6)) return [16, 24, 16];
     if (y === 4 && (x === 3 || x === 4)) return [16, 24, 16];
@@ -2166,12 +2536,19 @@ const MOB = {
   pig:      { hp: 10, hw: 0.45, h: 0.95, passive: true, speed: 1.1, drops: [[I.PORK, 1, 3]] },
   cow:      { hp: 10, hw: 0.45, h: 1.4, passive: true, speed: 1.0, drops: [[I.LEATHER, 0, 2], [I.BEEF, 1, 3]] },
   sheep:    { hp: 8, hw: 0.45, h: 1.3, passive: true, speed: 1.0, drops: [[B.WOOL, 1, 1], [I.MUTTON, 1, 2]] },
-  zombie:   { hp: 20, hw: 0.3, h: 1.95, speed: 2.4, burns: true, drops: [[I.FLESH, 0, 2]] },
+  zombie:   { hp: 20, hw: 0.3, h: 1.95, speed: 2.4, burns: true, melee: true, dmg: 3, drops: [[I.FLESH, 0, 2]] },
   skeleton: { hp: 20, hw: 0.3, h: 1.95, speed: 2.2, burns: true, drops: [[I.BONE, 0, 2], [I.ARROW, 0, 2]] },
   creeper:  { hp: 20, hw: 0.3, h: 1.7, speed: 2.1, drops: [[I.GUNPOWDER, 0, 2]] },
   villager: { hp: 20, hw: 0.3, h: 1.95, passive: true, speed: 0.7, drops: [], village: true },
+  piglin:   { hp: 20, hw: 0.3, h: 1.95, speed: 2.3, neutral: true, melee: true, dmg: 5, fireproof: true, drops: [[I.FLESH, 0, 1], [I.GOLD_INGOT, 0, 1]] },
+  enderman: { hp: 40, hw: 0.3, h: 2.9, speed: 3, neutral: true, melee: true, dmg: 5, armsDown: true, drops: [[I.ENDER_PEARL, 0, 1]] },
+  ghast:    { hp: 10, hw: 1.6, h: 3.4, flying: true, fireproof: true, speed: 1.6, drops: [[I.GHAST_TEAR, 0, 1], [I.GUNPOWDER, 0, 2]] },
+  blaze:    { hp: 20, hw: 0.35, h: 1.8, flying: true, fireproof: true, speed: 2.6, drops: [[I.BLAZE_ROD, 0, 1]] },
+  dragon:   { hp: 200, hw: 2.2, h: 2.2, boss: true, fireproof: true, drops: [] },
+  crystal:  { hp: 1, hw: 0.6, h: 1.4, passive: true, still: true, fireproof: true, drops: [] },
 };
-const HOSTILE = ['zombie', 'zombie', 'skeleton', 'creeper'];
+const HOSTILE = ['zombie', 'zombie', 'zombie', 'skeleton', 'skeleton', 'creeper', 'creeper', 'enderman'];
+const MOB_NAME = { zombie: '좀비', piglin: '좀비 피글린', enderman: '엔더맨' };
 function buildMobModel(type) {
   const g = new THREE.Group(), legs = [], arms = [], mats = [];
   const mat = tex => { const m = new THREE.MeshBasicMaterial({ map: tex }); mats.push(m); return m; };
@@ -2203,6 +2580,55 @@ function buildMobModel(type) {
     limb(-5, 22, 0, 2, 12, 2, bone, arms).rotation.x = -Math.PI / 2;
     limb(5, 22, 0, 2, 12, 2, bone, arms).rotation.x = -Math.PI / 2;
     box(8, 8, 8, faced(bone, face), 0, 28, 0);
+  } else if (type === 'piglin') {
+    const skin = mat(MOBTEX.pSkin), face = mat(MOBTEX.pFace), cloth = mat(MOBTEX.pCloth), gold = mat(MOBTEX.gold);
+    limb(-2, 12, 0, 4, 12, 4, cloth, legs); limb(2, 12, 0, 4, 12, 4, cloth, legs);
+    box(8, 12, 4, cloth, 0, 18, 0);
+    limb(-6, 22, 0, 4, 12, 4, skin, arms).rotation.x = -Math.PI / 2;
+    const r = limb(6, 22, 0, 4, 12, 4, skin, arms); r.rotation.x = -Math.PI / 2;
+    const sword = new THREE.Mesh(boxGeo(1, 10, 1), gold); sword.position.set(0, -12 * PXU, 3 * PXU); sword.rotation.x = Math.PI / 2; r.add(sword);
+    box(8, 8, 8, faced(skin, face), 0, 28, 0);
+  } else if (type === 'enderman') {
+    const skin = mat(MOBTEX.eSkin), face = mat(MOBTEX.eFace);
+    limb(-2, 30, 0, 2, 30, 2, skin, legs); limb(2, 30, 0, 2, 30, 2, skin, legs);
+    box(8, 12, 4, skin, 0, 36, 0);
+    limb(-5, 42, 0, 2, 30, 2, skin, arms); limb(5, 42, 0, 2, 30, 2, skin, arms);
+    box(8, 8, 8, faced(skin, face), 0, 46, 0);
+  } else if (type === 'blaze') {
+    const skin = mat(MOBTEX.bSkin), face = mat(MOBTEX.bFace);
+    box(8, 8, 8, faced(skin, face), 0, 24, 0);
+    const spin = new THREE.Group();
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * Math.PI * 2, rod = new THREE.Mesh(boxGeo(2, 8, 2), skin);
+      rod.position.set(Math.cos(a) * 6 * PXU, (i % 2 ? 8 : 14) * PXU, Math.sin(a) * 6 * PXU);
+      spin.add(rod);
+    }
+    g.add(spin); g.userData.spin = spin;
+  } else if (type === 'ghast') {
+    const skin = mat(MOBTEX.gSkin), face = mat(MOBTEX.gFace);
+    box(52, 52, 52, faced(skin, face), 0, 36, 0);
+    for (let i = 0; i < 9; i++) limb(((i % 3) - 1) * 16, 10, (Math.floor(i / 3) - 1) * 16, 4, 10 + (i * 7) % 12, 4, skin, legs);
+  } else if (type === 'dragon') {
+    const skin = mat(MOBTEX.dSkin), face = mat(MOBTEX.dFace);
+    const part = (w, h, d, x, y, z, m) => { const b2 = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m || skin); b2.position.set(x, y, z); g.add(b2); return b2; };
+    part(2.4, 1.8, 5, 0, 1.6, 0);
+    for (let i = 0; i < 3; i++) part(1, 1, 1.1, 0, 1.9 + i * 0.2, 3 + i);
+    part(1.8, 1.3, 2.2, 0, 2.4, 6.5, [skin, skin, skin, skin, face, skin]);
+    part(1.5, 0.4, 1.8, 0, 1.6, 6.6);
+    for (let i = 0; i < 6; i++) { const s2 = 0.9 - i * 0.1; part(s2, s2, 1, 0, 1.6 - i * 0.05, -3 - i); }
+    for (const side of [-1, 1]) {
+      const pivot = new THREE.Group(); pivot.position.set(1.1 * side, 2.3, 0.6);
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(6, 0.15, 3.5), skin); wing.position.x = 3 * side;
+      pivot.add(wing); g.add(pivot); arms.push(pivot);
+    }
+    g.rotation.order = 'YXZ';
+  } else if (type === 'crystal') {
+    const spin = new THREE.Group();
+    const inner = new THREE.Mesh(boxGeo(8, 8, 8), mat(MOBTEX.crystal));
+    const glass = new THREE.MeshBasicMaterial({ color: 0xd8b8ff, transparent: true, opacity: 0.35, depthWrite: false }); mats.push(glass);
+    const outer = new THREE.Mesh(boxGeo(15, 15, 15), glass);
+    spin.add(inner, outer); spin.position.y = 12 * PXU;
+    g.add(spin); g.userData.spin = spin;
   } else if (type === 'villager') {
     const robe = mat(MOBTEX.robe), face = mat(MOBTEX.vFace), skin = mat(MOBTEX.vSkin);
     limb(-2, 12, 0, 4, 12, 4, robe, legs); limb(2, 12, 0, 4, 12, 4, robe, legs);
@@ -2247,15 +2673,123 @@ function hurtMob(m, dmg, dir) {
   m.hp -= dmg; m.hurt = 0.35; m.hurtCd = 0.35;
   sfxMob(m.type, 'hurt', m.pos.distanceTo(player.pos));
   if (dir) { m.vel.x += dir.x * 6; m.vel.z += dir.z * 6; m.vel.y = 5; }
-  if (m.def.passive) { m.flee = 4; m.wander = 0; }
+  if (m.def.passive && !m.def.still) { m.flee = 4; m.wander = 0; }
+  if (m.def.neutral) {
+    m.angry = true;
+    if (m.type === 'piglin') for (const o of mobs) if (o.type === 'piglin' && o.pos.distanceTo(m.pos) < 16) o.angry = true;
+  }
+  if (m.def.boss || m.def.flying) { m.vel.y = 0; if (dir) { m.vel.x *= 0.3; m.vel.z *= 0.3; } }
+  if (m.type === 'enderman' && m.hp > 0 && Math.random() < 0.6) endermanTeleport(m);
   if (m.hp <= 0) {
-    const c = m.pos;
+    const c = m.pos.clone();
     for (const [id, lo, hi] of m.def.drops) {
       const n = lo + (Math.random() * (hi - lo + 1) | 0);
       if (n) spawnDrop(id, n, c.x, c.y + 0.6, c.z);
     }
     removeMob(m);
+    if (m.type === 'crystal') { endState.crystalsGone.add(m.pillar); scheduleSave(); explode(c.x, c.y + 0.5, c.z, 3); }
+    if (m.def.boss) dragonDefeated();
   }
+}
+function endermanTeleport(m) {
+  for (let k = 0; k < 16; k++) {
+    const x = Math.floor(m.pos.x + (Math.random() - 0.5) * 24), z = Math.floor(m.pos.z + (Math.random() - 0.5) * 24);
+    if (!chunkReady(x, z)) continue;
+    for (let y = Math.floor(m.pos.y) + 8; y > Math.floor(m.pos.y) - 8; y--) {
+      if (SOLID[getBlock(x, y - 1, z)] && !LIQUID[getBlock(x, y, z)] && !collidesBox(x + 0.5, y, z + 0.5, m.hw, m.h)) {
+        sfx.teleport(m.pos.distanceTo(player.pos));
+        m.pos.set(x + 0.5, y, z + 0.5); m.vel.set(0, 0, 0);
+        return;
+      }
+    }
+  }
+}
+// 가스트와 블레이즈: 공중에 떠서 거리를 두고 불덩이를 쏨
+function updateFlyer(m, dt, dist) {
+  const p = player.pos;
+  const hunting = mode === 'survival' && !player.dead && dist < (m.type === 'ghast' ? 48 : 24);
+  const eye = new THREE.Vector3(m.pos.x, m.pos.y + m.h * 0.6, m.pos.z), tgt = new THREE.Vector3(p.x, p.y + 1.2, p.z);
+  let goal;
+  m.wander -= dt;
+  if (hunting) {
+    m.targetYaw = Math.atan2(p.x - m.pos.x, p.z - m.pos.z);
+    const keep = m.type === 'ghast' ? 14 : 7, dd = Math.max(dist, 0.1);
+    goal = new THREE.Vector3(p.x + (m.pos.x - p.x) / dd * keep, p.y + (m.type === 'ghast' ? 8 : 2.5), p.z + (m.pos.z - p.z) / dd * keep);
+    const see = lineOfSight(eye, tgt);
+    if (m.type === 'blaze') {
+      if (m.volley > 0) { m.volleyT -= dt; if (m.volleyT <= 0) { shootFire(eye, tgt, 'small'); m.volley--; m.volleyT = 0.35; } }
+      else if (see && m.attackCd <= 0) { m.volley = 3; m.volleyT = 0; m.attackCd = 4 + Math.random() * 2; sfx.blaze(dist); }
+    } else if (see && m.attackCd <= 0) { shootFire(eye, tgt, 'big'); m.attackCd = 3.5 + Math.random() * 2; sfxMob('ghast', 'hurt', dist); }
+  } else {
+    if (!m.goal || m.wander <= 0) {
+      m.goal = new THREE.Vector3(m.pos.x + (Math.random() - 0.5) * 20, m.pos.y + (Math.random() - 0.5) * 6, m.pos.z + (Math.random() - 0.5) * 20);
+      m.wander = 4 + Math.random() * 4;
+      m.targetYaw = Math.atan2(m.goal.x - m.pos.x, m.goal.z - m.pos.z);
+    }
+    goal = m.goal;
+  }
+  const want = goal.clone().sub(m.pos), l = want.length();
+  if (l > 0.5) want.multiplyScalar(m.def.speed / l); else want.set(0, 0, 0);
+  m.vel.lerp(want, Math.min(1, dt * 2));
+  moveEntity(m, dt);
+  m.yaw += Math.max(-4 * dt, Math.min(4 * dt, wrapAngle(m.targetYaw - m.yaw)));
+  if (m.g.userData.spin) m.g.userData.spin.rotation.y += dt * 2.5;
+  m.legs.forEach((leg, i) => leg.rotation.x = Math.sin(m.t * 2 + i) * 0.3);
+  m.sndT -= dt;
+  if (m.sndT <= 0) { m.sndT = 5 + Math.random() * 8; if (dist < 40) sfxMob(m.type, 'idle', dist); }
+  m.g.position.copy(m.pos);
+  m.g.rotation.y = m.yaw;
+}
+// 엔더 드래곤: 기둥 둘레를 돌다가 가끔 플레이어에게 돌진. 수정이 남아 있으면 체력이 회복됨
+function updateDragon(m, dt) {
+  if (mobs.some(c => c.type === 'crystal') && m.hp < m.def.hp) {
+    m.healT = (m.healT || 0) + dt;
+    if (m.healT > 1) { m.healT = 0; m.hp = Math.min(m.def.hp, m.hp + 2); }
+  }
+  const p = player.pos, canAttack = mode === 'survival' && !player.dead;
+  m.stateT = (m.stateT === undefined ? 8 : m.stateT) - dt;
+  let target, speed = 13;
+  if (m.state === 'charge') {
+    target = new THREE.Vector3(p.x, p.y + 1, p.z); speed = 19;
+    if (m.pos.clone().setY(m.pos.y + 1.5).distanceTo(target) < 3.5) {
+      const l = Math.hypot(m.vel.x, m.vel.z) || 1;
+      damagePlayer(6, { x: m.vel.x / l, z: m.vel.z / l }, '엔더 드래곤에게 당했습니다');
+      player.vel.y += 6;
+      m.state = 'circle'; m.stateT = 7 + Math.random() * 6;
+    }
+    if (m.stateT <= 0 || !canAttack) { m.state = 'circle'; m.stateT = 6; }
+  } else {
+    m.ang = (m.ang || 0) + dt * 0.3;
+    target = new THREE.Vector3(Math.cos(m.ang) * 42, 72 + Math.sin(m.t * 0.6) * 6, Math.sin(m.ang) * 42);
+    if (m.stateT <= 0 && canAttack && m.pos.distanceTo(p) < 120) { m.state = 'charge'; m.stateT = 7; sfx.roar(); }
+  }
+  const want = target.sub(m.pos), d = want.length() || 1;
+  want.multiplyScalar(speed / d);
+  m.vel.lerp(want, Math.min(1, dt * 1.2));
+  m.pos.addScaledVector(m.vel, dt);
+  m.yaw += wrapAngle(Math.atan2(m.vel.x, m.vel.z) - m.yaw) * Math.min(1, dt * 3);
+  m.g.position.copy(m.pos);
+  m.g.rotation.y = m.yaw;
+  m.g.rotation.x = -Math.atan2(m.vel.y, Math.hypot(m.vel.x, m.vel.z)) * 0.5;
+  m.arms.forEach((w, i) => w.rotation.z = Math.sin(m.t * 3) * 0.6 * (i ? -1 : 1));
+  m.sndT -= dt;
+  if (m.sndT <= 0) { m.sndT = 6 + Math.random() * 6; sfx.roar(0.4); }
+}
+function setupEndMobs() {
+  if (endState.dragonDead) return;
+  for (const pl of endPillars()) if (!endState.crystalsGone.has(pl.i)) { const c = spawnMob('crystal', pl.x + 0.5, pl.h + 2, pl.z + 0.5); c.pillar = pl.i; }
+  const d = spawnMob('dragon', 0, 75, -40);
+  d.state = 'circle'; d.stateT = 10;
+}
+function dragonDefeated() {
+  endState.dragonDead = true;
+  const batch = new Set();
+  for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) if (Math.hypot(dx, dz) < 2.5 && (dx || dz)) setBlock(dx, END_TOP, dz, B.END_PORTAL, batch);
+  setBlock(0, END_TOP + 4, 0, B.DRAGON_EGG, batch);
+  for (const c of batch) if (c.meshed) buildMesh(c);
+  sfx.portal();
+  toast('엔더 드래곤을 물리쳤습니다! 섬 가운데 차원문으로 돌아갈 수 있습니다');
+  scheduleSave();
 }
 function skyExposed(x, y, z) {
   for (let yy = Math.floor(y); yy < CH; yy++) { const id = getBlock(Math.floor(x), yy, Math.floor(z)); if (id !== B.AIR && id !== B.WATER) return false; }
@@ -2272,12 +2806,27 @@ function lineOfSight(a, b) {
 }
 const wrapAngle = a => Math.atan2(Math.sin(a), Math.cos(a));
 function updateMob(m, dt) {
+  m.t = (m.t || 0) + dt;
+  m.hurt -= dt; m.hurtCd -= dt; m.attackCd -= dt;
+  if (m.def.boss) { updateDragon(m, dt); return; }
   if (!chunkReady(m.pos.x, m.pos.z)) return;
   const dxp = player.pos.x - m.pos.x, dzp = player.pos.z - m.pos.z, dyp = player.pos.y - m.pos.y;
   const dist = Math.hypot(dxp, dzp);
+  if (m.def.still) {
+    m.g.userData.spin.rotation.y += dt * 1.5;
+    m.g.userData.spin.position.y = (12 + Math.sin(m.t * 2) * 3) * PXU;
+    m.g.position.copy(m.pos);
+    return;
+  }
   if (dist > 90) { removeMob(m); return; }
+  if (m.def.flying) { updateFlyer(m, dt, dist); return; }
+  // 엔더맨은 눈을 마주치면 화남
+  if (m.type === 'enderman' && !m.angry && mode === 'survival' && dist < 30 && (m.lookT = (m.lookT || 0) + dt) > 0.3) {
+    m.lookT = 0;
+    const head = new THREE.Vector3(m.pos.x, m.pos.y + 2.6, m.pos.z), to = head.clone().sub(camera.position);
+    if (to.normalize().dot(lookDir()) > 0.992 && lineOfSight(camera.position.clone(), head)) { m.angry = true; sfx.scream(); }
+  }
   let move = 0;
-  m.hurt -= dt; m.hurtCd -= dt; m.attackCd -= dt;
   const wander = spd => {
     m.wander -= dt;
     if (m.wander <= 0) {
@@ -2287,7 +2836,7 @@ function updateMob(m, dt) {
     }
     return m.walking ? spd : 0;
   };
-  const hunting = !m.def.passive && mode === 'survival' && !player.dead && dist < 20;
+  const hunting = !m.def.passive && mode === 'survival' && !player.dead && dist < 20 && (!m.def.neutral || m.angry);
   if (m.home && Math.hypot(m.home.x - m.pos.x, m.home.z - m.pos.z) > 18 && m.flee <= 0) {
     m.targetYaw = Math.atan2(m.home.x - m.pos.x, m.home.z - m.pos.z); move = m.def.speed;
   } else if (m.def.passive) {
@@ -2298,11 +2847,11 @@ function updateMob(m, dt) {
   } else if (!hunting) {
     move = wander(0.9);
     m.fuse = Math.max(0, m.fuse - dt);
-  } else if (m.type === 'zombie') {
+  } else if (m.def.melee) {
     m.targetYaw = Math.atan2(dxp, dzp);
     move = dist > 0.9 ? m.def.speed : 0;
     if (dist < 1.4 && Math.abs(dyp) < 1.6 && m.attackCd <= 0) {
-      damagePlayer(3, { x: dxp / (dist || 1), z: dzp / (dist || 1) }, '좀비에게 당했습니다');
+      damagePlayer(m.def.dmg, { x: dxp / (dist || 1), z: dzp / (dist || 1) }, (MOB_NAME[m.type] || '몬스터') + '에게 당했습니다');
       m.attackCd = 1;
     }
   } else if (m.type === 'skeleton') {
@@ -2328,7 +2877,7 @@ function updateMob(m, dt) {
     m.burnT += dt;
     if (m.burnT > 1) {
       m.burnT = 0;
-      m.burning = light > 0.7 && skyExposed(m.pos.x, m.pos.y + m.h, m.pos.z);
+      m.burning = dim === 'overworld' && light > 0.7 && skyExposed(m.pos.x, m.pos.y + m.h, m.pos.z);
       if (m.burning) { m.hurtCd = 0; hurtMob(m, 2, null); if (m.hp <= 0) return; }
     }
   }
@@ -2340,7 +2889,9 @@ function updateMob(m, dt) {
   const k = Math.min(1, dt * (m.onGround ? 10 : 2));
   m.vel.x += (tx - m.vel.x) * k;
   m.vel.z += (tz - m.vel.z) * k;
-  const inWater = getBlock(Math.floor(m.pos.x), Math.floor(m.pos.y + 0.4), Math.floor(m.pos.z)) === B.WATER;
+  const inBlock = getBlock(Math.floor(m.pos.x), Math.floor(m.pos.y + 0.4), Math.floor(m.pos.z));
+  const inWater = inBlock === B.WATER || inBlock === B.LAVA;
+  if (inBlock === B.LAVA && !m.def.fireproof) { m.lavaT = (m.lavaT || 0) + dt; if (m.lavaT > 0.5) { m.lavaT = 0; m.hurtCd = 0; hurtMob(m, 4, null); if (m.hp <= 0) return; } }
   if (inWater) m.vel.y = Math.min(m.vel.y + 18 * dt, 2.2);
   else m.vel.y = Math.max(m.vel.y - 28 * dt, -40);
   const wall = moveEntity(m, dt);
@@ -2351,7 +2902,7 @@ function updateMob(m, dt) {
   const swing = Math.sin(m.phase) * 0.7 * Math.min(1, spd / 1.5);
   const quad = m.legs.length === 4;
   m.legs.forEach((l, i) => l.rotation.x = ((quad ? (i === 0 || i === 3) : i === 0) ? swing : -swing));
-  m.arms.forEach((a, i) => a.rotation.x = -Math.PI / 2 + (i ? swing : -swing) * 0.15);
+  m.arms.forEach((a, i) => a.rotation.x = m.def.armsDown ? (i ? -swing : swing) * 0.6 : -Math.PI / 2 + (i ? swing : -swing) * 0.15);
   // 크리퍼는 터지기 직전 부풀어 오름
   const s = m.fuse > 0 ? 1 + m.fuse * 0.1 : 1;
   m.g.scale.set(s, 1 + (s - 1) * 0.5, s);
@@ -2375,10 +2926,76 @@ function shootArrow(from, to) {
   arrows.push({ pos: from.clone(), vel, mesh, life: 0, stuck: false });
   sfx.bow(from.distanceTo(player.pos));
 }
+const fireMat = new THREE.MeshBasicMaterial({ color: 0xff8a20 }), pearlMat = new THREE.MeshBasicMaterial({ color: 0x1e8c7a });
+const eyeMat = new THREE.MeshBasicMaterial({ color: 0x5fd48a });
+const fireGeoS = new THREE.SphereGeometry(0.16, 8, 6), fireGeoB = new THREE.SphereGeometry(0.45, 10, 8);
+function shootFire(from, to, kind) {
+  const dir = to.clone().sub(from).normalize();
+  if (kind === 'small') { dir.x += (Math.random() - 0.5) * 0.08; dir.z += (Math.random() - 0.5) * 0.08; }
+  const mesh = new THREE.Mesh(kind === 'big' ? fireGeoB : fireGeoS, fireMat);
+  scene.add(mesh);
+  arrows.push({ pos: from.clone(), vel: dir.multiplyScalar(kind === 'big' ? 12 : 16), mesh, life: 0, stuck: false, kind: kind === 'big' ? 'fireball' : 'smallfire' });
+}
+function throwPearl() {
+  const dir = lookDir(), from = camera.position.clone().add(dir.clone().multiplyScalar(0.5));
+  const mesh = new THREE.Mesh(fireGeoS, pearlMat);
+  scene.add(mesh);
+  arrows.push({ pos: from, vel: dir.multiplyScalar(22), mesh, life: 0, stuck: false, kind: 'pearl', player: true });
+  sfx.bow(0);
+}
+// 진주가 떨어진 곳으로 순간이동 (조금 아프다)
+function pearlLand(a) {
+  const pos = a.pos.clone().add(a.vel.clone().normalize().multiplyScalar(-0.4));
+  let y = Math.floor(pos.y);
+  while (collidesBox(pos.x, y, pos.z, player.hw, player.h) && y < CH - 2) y++;
+  if (player.riding) dismount();
+  player.pos.set(pos.x, y, pos.z); player.vel.set(0, 0, 0); player.peakY = y;
+  sfx.teleport(0);
+  player.invuln = 0; damagePlayer(2, null, '엔더 진주에 다쳤습니다', true);
+}
+// 엔더의 눈: 가장 가까운 엔드 요새 쪽으로 날아갔다가 떨어짐
+function throwEye() {
+  const from = camera.position.clone();
+  const st = strongholds().reduce((a, b) => Math.hypot(a.x - from.x, a.z - from.z) < Math.hypot(b.x - from.x, b.z - from.z) ? a : b);
+  const dx = st.x + 0.5 - from.x, dz = st.z + 0.5 - from.z, d = Math.hypot(dx, dz) || 1, go = Math.min(12, d);
+  const mesh = new THREE.Mesh(fireGeoS, eyeMat); mesh.scale.setScalar(1.6);
+  scene.add(mesh);
+  arrows.push({ kind: 'eye', pos: from.clone(), start: from.clone(), dir: new THREE.Vector3(dx / d * go, 0, dz / d * go), near: d < 16, mesh, life: 0 });
+  sfx.bow(0);
+  toast(d < 16 ? '엔더의 눈이 발밑을 가리킵니다. 아래로 파 보세요' : `엔더의 눈이 날아간 쪽으로 가세요 (약 ${Math.round(d)}칸)`);
+}
+function updateEye(a, i, dt) {
+  const k = Math.min(1, a.life / 1.4);
+  a.pos.copy(a.start).addScaledVector(a.dir, k);
+  a.pos.y += a.near ? -k * 3 : Math.sin(k * Math.PI / 2) * 3;
+  a.mesh.position.copy(a.pos);
+  if (a.life > 2.6) {
+    scene.remove(a.mesh); arrows.splice(i, 1);
+    if (mode === 'survival' && Math.random() < 0.8) spawnDrop(I.EYE_OF_ENDER, 1, a.pos.x, a.pos.y, a.pos.z, new THREE.Vector3(0, 1, 0));
+    else sfx.glassBreak();
+  }
+}
+// 엔드 차원문 틀 12개에 모두 눈을 넣으면 가운데가 열림
+function checkEndPortal(x, y, z) {
+  for (let cx = x - 2; cx <= x + 2; cx++) for (let cz = z - 2; cz <= z + 2; cz++) {
+    let ok = true;
+    for (let dx = -2; dx <= 2 && ok; dx++) for (let dz = -2; dz <= 2; dz++) {
+      const ax = Math.abs(dx), az = Math.abs(dz);
+      if ((ax === 2) !== (az === 2) && getBlock(cx + dx, y, cz + dz) !== B.EPF_EYE) { ok = false; break; }
+    }
+    if (!ok) continue;
+    const batch = new Set();
+    for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) setBlock(cx + dx, y, cz + dz, B.END_PORTAL, batch);
+    for (const c of batch) buildMesh(c);
+    sfx.portal(); toast('엔드 차원문이 열렸습니다');
+    return;
+  }
+}
 function updateArrows(dt) {
   for (let i = arrows.length - 1; i >= 0; i--) {
     const a = arrows[i];
     a.life += dt;
+    if (a.kind === 'eye') { updateEye(a, i, dt); continue; }
     if (a.life > (a.stuck ? (a.player ? 60 : 8) : 5)) { scene.remove(a.mesh); arrows.splice(i, 1); continue; }
     if (a.stuck) {
       if (a.pickup && !player.dead && a.pos.distanceTo(player.pos.clone().setY(player.pos.y + 0.8)) < 1.6 && addItem(I.ARROW, 1) === 0) {
@@ -2386,27 +3003,37 @@ function updateArrows(dt) {
       }
       continue;
     }
-    a.vel.y -= 20 * dt;
+    if (!a.kind || a.kind === 'pearl') a.vel.y -= 20 * dt;
     // 빠른 화살이 몹을 뚫고 지나가지 않게 0.25칸씩 나눠서 움직임
     const steps = Math.max(1, Math.ceil(a.vel.length() * dt / 0.25));
     const step = a.vel.clone().multiplyScalar(dt / steps);
     let done = false;
     for (let k = 0; k < steps && !done; k++) {
       const next = a.pos.clone().add(step);
-      if (SOLID[getBlock(Math.floor(next.x), Math.floor(next.y), Math.floor(next.z))]) { a.stuck = true; a.life = 0; sfxBlock(B.PLANKS, 'dig'); done = true; break; }
+      if (SOLID[getBlock(Math.floor(next.x), Math.floor(next.y), Math.floor(next.z))]) {
+        if (!a.kind) { a.stuck = true; a.life = 0; sfxBlock(B.PLANKS, 'dig'); done = true; break; }
+        scene.remove(a.mesh); arrows.splice(i, 1); done = true;
+        if (a.kind === 'fireball') explode(a.pos.x, a.pos.y, a.pos.z, 1.3);
+        else if (a.kind === 'pearl') pearlLand(a);
+        break;
+      }
       a.pos.copy(next);
       const l = Math.hypot(a.vel.x, a.vel.z) || 1;
       if (a.player) {
         const m = mobs.find(m => Math.abs(a.pos.x - m.pos.x) < m.hw + 0.1 && Math.abs(a.pos.z - m.pos.z) < m.hw + 0.1 && a.pos.y > m.pos.y && a.pos.y < m.pos.y + m.h);
         if (m) {
+          scene.remove(a.mesh); arrows.splice(i, 1); done = true;
+          if (a.kind === 'pearl') { pearlLand(a); break; }
           m.hurtCd = 0; hurtMob(m, a.dmg, { x: a.vel.x / l * 0.5, z: a.vel.z / l * 0.5 });
-          sfx.hit(); scene.remove(a.mesh); arrows.splice(i, 1); done = true;
+          sfx.hit();
         }
       } else {
         const p = player.pos;
         if (!player.dead && Math.abs(a.pos.x - p.x) < 0.4 && Math.abs(a.pos.z - p.z) < 0.4 && a.pos.y > p.y && a.pos.y < p.y + player.h) {
-          damagePlayer(2 + (Math.random() * 3 | 0), { x: a.vel.x / l * 0.6, z: a.vel.z / l * 0.6 }, '스켈레톤의 화살에 맞았습니다');
           scene.remove(a.mesh); arrows.splice(i, 1); done = true;
+          if (a.kind === 'fireball') explode(a.pos.x, a.pos.y, a.pos.z, 1.3);
+          else if (a.kind === 'smallfire') { damagePlayer(5, { x: a.vel.x / l * 0.4, z: a.vel.z / l * 0.4 }, '블레이즈의 불덩이에 맞았습니다'); player.burn = 3; }
+          else damagePlayer(2 + (Math.random() * 3 | 0), { x: a.vel.x / l * 0.6, z: a.vel.z / l * 0.6 }, '스켈레톤의 화살에 맞았습니다');
         }
       }
     }
@@ -2428,7 +3055,7 @@ function explode(x, y, z, r) {
     const bx = cx + dx, by = cy + dy, bz = cz + dz;
     if (by <= 0 || by >= CH) continue;
     const id = getBlock(bx, by, bz);
-    if (id === B.AIR || id === B.WATER || id === B.BEDROCK) continue;
+    if (id === B.AIR || LIQUID[id] || BLOCKS[id].blast) continue;
     if (id === B.TNT) { setBlock(bx, by, bz, B.AIR, batch); primeTnt(bx, by, bz, 0.4 + Math.random() * 0.6); continue; }
     if (id === B.CHEST) spillChest(bx, by, bz);
     setBlock(bx, by, bz, B.AIR, batch);
@@ -2491,6 +3118,171 @@ function updateTnts(dt) {
       scene.remove(t.mesh); t.mat.dispose(); tnts.splice(i, 1);
       explode(t.x, t.y, t.z, 4);
     }
+  }
+}
+
+// =====================================================================
+// 차원 이동과 차원문
+// =====================================================================
+let owBoats = null; // 지상을 떠날 때 보트를 잠시 보관
+function switchDim(nd, x, y, z) {
+  if (player.riding) dismount();
+  if (dim === 'overworld') owBoats = boats.map(b => [b.pos.x, b.pos.y, b.pos.z, b.yaw]);
+  while (boats.length) removeBoat(boats[0]);
+  for (const c of chunks.values()) disposeMeshes(c);
+  chunks.clear(); lcCache = null; lastCenter = null; wanted = [];
+  while (mobs.length) removeMob(mobs[0]);
+  while (drops.length) removeDrop(0);
+  for (const a of arrows) scene.remove(a.mesh);
+  arrows.length = 0;
+  for (const t of tnts) scene.remove(t.mesh);
+  tnts.length = 0;
+  crops.clear();
+  dim = nd; edits = editsByDim[nd];
+  player.pos.set(x, y, z); player.vel.set(0, 0, 0); player.peakY = y; player.burn = 0;
+  applyDimVisuals();
+  preload();
+  if (nd === 'overworld' && owBoats) { for (const [bx, by, bz, yaw] of owBoats) spawnBoat(bx, by, bz, yaw); owBoats = null; }
+  if (nd === 'end') setupEndMobs();
+  scheduleSave();
+}
+// 흑요석 틀 안쪽 빈칸(x, y, z)에서 시작해 틀을 찾고 차원문으로 채움
+function tryLightPortal(x, y, z) {
+  if (getBlock(x, y, z) !== B.AIR) return false;
+  for (const axis of [0, 2]) {
+    const dx = axis === 0 ? 1 : 0, dz = axis === 0 ? 0 : 1;
+    let by = y;
+    while (by > y - 22 && getBlock(x, by - 1, z) === B.AIR) by--;
+    if (getBlock(x, by - 1, z) !== B.OBSIDIAN) continue;
+    let lx = 0; while (lx < 22 && getBlock(x - dx * (lx + 1), by, z - dz * (lx + 1)) === B.AIR) lx++;
+    let rx = 0; while (rx < 22 && getBlock(x + dx * (rx + 1), by, z + dz * (rx + 1)) === B.AIR) rx++;
+    const w = lx + rx + 1;
+    if (w < 2 || w > 21) continue;
+    const sx = x - dx * lx, sz = z - dz * lx;
+    let h = 0; while (h < 22 && getBlock(sx, by + h, sz) === B.AIR) h++;
+    if (h < 3 || h > 21) continue;
+    let ok = true;
+    for (let i = 0; i < w && ok; i++) {
+      const px = sx + dx * i, pz = sz + dz * i;
+      if (getBlock(px, by - 1, pz) !== B.OBSIDIAN || getBlock(px, by + h, pz) !== B.OBSIDIAN) ok = false;
+      for (let j = 0; j < h && ok; j++) if (getBlock(px, by + j, pz) !== B.AIR) ok = false;
+    }
+    for (let j = 0; j < h && ok; j++)
+      if (getBlock(sx - dx, by + j, sz - dz) !== B.OBSIDIAN || getBlock(sx + dx * w, by + j, sz + dz * w) !== B.OBSIDIAN) ok = false;
+    if (!ok) continue;
+    const id = axis === 0 ? B.PORTAL_X : B.PORTAL_Z, batch = new Set();
+    for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) setBlock(sx + dx * i, by + j, sz + dz * i, id, batch);
+    for (const c of batch) buildMesh(c);
+    sfx.portal();
+    return true;
+  }
+  return false;
+}
+// 틀이 부서지면 이어진 차원문 블록을 모두 없앰
+function breakPortalNear(x, y, z) {
+  const stack = [[x, y, z]], seen = new Set(), batch = new Set();
+  let n = 0;
+  while (stack.length && n < 600) {
+    const [cx, cy, cz] = stack.pop();
+    for (const [dx, dy, dz] of DIRS6) {
+      const nx = cx + dx, ny = cy + dy, nz = cz + dz, k = nx + ',' + ny + ',' + nz;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      if (!BLOCKS[getBlock(nx, ny, nz)].portal) continue;
+      setBlock(nx, ny, nz, B.AIR, batch); n++;
+      stack.push([nx, ny, nz]);
+    }
+  }
+  for (const c of batch) buildMesh(c);
+}
+function findPortalNear(tx, tz, r) {
+  let best = null, bd = Infinity;
+  for (let x = tx - r; x <= tx + r; x++) for (let z = tz - r; z <= tz + r; z++) for (let y = 1; y < CH - 1; y++) {
+    if (!BLOCKS[getBlock(x, y, z)].portal || BLOCKS[getBlock(x, y - 1, z)].portal) continue;
+    const d = Math.hypot(x - tx, z - tz);
+    if (d < bd) { bd = d; best = { x, y, z }; }
+  }
+  return best;
+}
+// 도착한 곳에 차원문이 없으면 새로 만듦 (흑요석 발판 포함)
+function buildPortalAt(tx, tz) {
+  let y = -1;
+  if (dim === 'nether') {
+    for (let yy = 30; yy < 86 && y < 0; yy++) {
+      if (SOLID[getBlock(tx, yy - 1, tz)] && [0, 1, 2, 3].every(h => getBlock(tx, yy + h, tz) === B.AIR)) y = yy;
+    }
+    if (y < 0) y = 50;
+  } else {
+    for (let yy = CH - 3; yy > 1; yy--) { const id = getBlock(tx, yy, tz); if (SOLID[id] && id !== B.LEAVES) { y = yy + 1; break; } }
+    if (y < 0) y = SEA + 2;
+  }
+  const batch = new Set();
+  for (let dx = -1; dx <= 2; dx++) for (let dz = -1; dz <= 1; dz++) {
+    setBlock(tx + dx, y - 1, tz + dz, B.OBSIDIAN, batch);
+    for (let h = 0; h <= 3; h++) setBlock(tx + dx, y + h, tz + dz, B.AIR, batch);
+  }
+  for (let dx = -1; dx <= 2; dx++) for (let h = -1; h <= 3; h++) {
+    const frame = dx === -1 || dx === 2 || h === -1 || h === 3;
+    setBlock(tx + dx, y + h, tz, frame ? B.OBSIDIAN : B.PORTAL_X, batch);
+  }
+  for (const c of batch) if (c.meshed) buildMesh(c);
+  return { x: tx, y, z: tz };
+}
+function travelNether() {
+  const toNether = dim === 'overworld', f = toNether ? 1 / 8 : 8;
+  const tx = Math.floor(player.pos.x * f), tz = Math.floor(player.pos.z * f);
+  switchDim(toNether ? 'nether' : 'overworld', tx + 0.5, 64, tz + 0.5);
+  const p = findPortalNear(tx, tz, 16) || buildPortalAt(tx, tz);
+  player.pos.set(p.x + 0.5, p.y, p.z + 0.5); player.peakY = p.y;
+  player.portalCooldown = true; player.portalT = 0;
+  toast(toNether ? '네더에 도착했습니다. 용암을 조심하세요' : '지상으로 돌아왔습니다');
+}
+function respawnAtSpawnPoint() {
+  let atBed = false;
+  if (spawnPoint) {
+    const [bx, by, bz] = spawnPoint;
+    player.pos.set(bx + 0.5, by + 0.6, bz + 0.5);
+    preload();
+    if (getBlock(bx, by, bz) === B.BED) atBed = true;
+    else { spawnPoint = null; toast('침대가 없어져서 처음 장소로 돌아왔습니다'); }
+  }
+  if (!atBed) { const s = findSpawn(); player.pos.set(s[0], s[1], s[2]); preload(); }
+  player.vel.set(0, 0, 0); player.peakY = player.pos.y;
+}
+function travelEnd() {
+  player.portalCooldown = true;
+  if (dim === 'end') {
+    switchDim('overworld', 0.5, 70, 0.5);
+    respawnAtSpawnPoint();
+    toast('지상으로 돌아왔습니다');
+    return;
+  }
+  switchDim('end', 100.5, 49, 0.5);
+  const batch = new Set();
+  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+    setBlock(100 + dx, END_TOP, dz, B.OBSIDIAN, batch);
+    for (let h = 1; h <= 3; h++) setBlock(100 + dx, END_TOP + h, dz, B.AIR, batch);
+  }
+  for (const c of batch) if (c.meshed) buildMesh(c);
+  player.pos.set(100.5, END_TOP + 1, 0.5); player.peakY = player.pos.y;
+  toast(endState.dragonDead ? '엔드에 도착했습니다' : '엔드에 도착했습니다. 엔더 드래곤을 물리치세요');
+}
+// 차원문 안에 서 있으면 (네더 차원문은 잠시 뒤) 이동
+function portalTick(dt) {
+  const p = player.pos, fx = Math.floor(p.x), fz = Math.floor(p.z);
+  const a = getBlock(fx, Math.floor(p.y + 0.2), fz), b = getBlock(fx, Math.floor(p.y + 1.2), fz);
+  const tint = document.getElementById('portal-tint');
+  if (BLOCKS[a].endPortal || BLOCKS[b].endPortal) {
+    if (!player.portalCooldown) travelEnd();
+    return;
+  }
+  if (BLOCKS[a].portal || BLOCKS[b].portal) {
+    player.portalT = (player.portalT || 0) + dt;
+    const need = mode === 'creative' ? 0.6 : 2.5;
+    tint.style.opacity = player.portalCooldown ? 0 : Math.min(0.85, player.portalT / need);
+    if (!player.portalCooldown && player.portalT >= need) { tint.style.opacity = 0; travelNether(); }
+  } else {
+    player.portalT = 0; player.portalCooldown = false; tint.style.opacity = 0;
   }
 }
 
@@ -2567,13 +3359,46 @@ function updateBoats(dt) {
   }
 }
 
+function spawnNether(count) {
+  if (count >= 14) return;
+  const a = Math.random() * Math.PI * 2, d = 12 + Math.random() * 28;
+  const x = Math.floor(player.pos.x + Math.cos(a) * d), z = Math.floor(player.pos.z + Math.sin(a) * d);
+  if (!chunkReady(x, z)) return;
+  const nearFort = fortressesNear(x, z, x, z, 40).some(f => Math.hypot(f.x - x, f.z - z) < 50);
+  const roll = Math.random();
+  const type = roll < (nearFort ? 0.5 : 0.08) ? 'blaze' : roll < (nearFort ? 0.6 : 0.3) ? 'ghast' : 'piglin';
+  if (type === 'ghast') {
+    const y = 40 + (Math.random() * 40 | 0);
+    for (let dy = 0; dy < 4; dy++) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) if (getBlock(x + dx, y + dy, z + dz) !== B.AIR) return;
+    spawnMob('ghast', x + 0.5, y, z + 0.5);
+    return;
+  }
+  for (let y = 20 + (Math.random() * 60 | 0); y > 10; y--) {
+    const below = getBlock(x, y - 1, z);
+    if (getBlock(x, y, z) === B.AIR && getBlock(x, y + 1, z) === B.AIR && SOLID[below] && below !== B.BEDROCK) { spawnMob(type, x + 0.5, y, z + 0.5); return; }
+  }
+}
+function spawnEnd(count) {
+  if (count >= 8 || Math.random() < 0.5) return;
+  const a = Math.random() * Math.PI * 2, d = 10 + Math.random() * 30;
+  const x = Math.floor(player.pos.x + Math.cos(a) * d), z = Math.floor(player.pos.z + Math.sin(a) * d);
+  if (!chunkReady(x, z)) return;
+  for (let y = 70; y > 10; y--) {
+    if (getBlock(x, y - 1, z) === B.END_STONE) {
+      if (getBlock(x, y, z) === B.AIR && getBlock(x, y + 1, z) === B.AIR && getBlock(x, y + 2, z) === B.AIR) spawnMob('enderman', x + 0.5, y, z + 0.5);
+      return;
+    }
+  }
+}
 let spawnTimer = 0;
 function spawnTick(dt) {
   spawnTimer -= dt;
   if (spawnTimer > 0) return;
   spawnTimer = 1;
   let passive = 0, hostile = 0;
-  for (const m of mobs) if (m.def.village) continue; else if (m.def.passive) passive++; else hostile++;
+  for (const m of mobs) if (m.def.village || m.def.boss || m.def.still) continue; else if (m.def.passive) passive++; else hostile++;
+  if (dim === 'nether') { spawnNether(hostile); return; }
+  if (dim === 'end') { spawnEnd(hostile); return; }
   const pick = list => list[Math.random() * list.length | 0];
   const tryAt = type => {
     const a = Math.random() * Math.PI * 2, d = 18 + Math.random() * 26;
@@ -2703,6 +3528,12 @@ const sfx = {
   bow: dist => { const v = Math.max(0, 1 - dist / 24); sfxNoise(0.15, 1800, { q: 1.5, vol: 0.25 * v }); sfxTone(500, 0.08, { type: 'triangle', vol: 0.08 * v, to: 250 }); },
   chest: () => { sfxTone(180, 0.25, { type: 'triangle', vol: 0.15, to: 120 }); sfxNoise(0.2, 700, { q: 2, vol: 0.2 }); },
   equip: () => { sfxTone(900, 0.08, { vol: 0.1 }); sfxTone(1350, 0.1, { vol: 0.08, delay: 0.05 }); sfxNoise(0.08, 4000, { type: 'highpass', vol: 0.1 }); },
+  roar: (v = 1) => { sfxTone(70, 1.4, { type: 'sawtooth', vol: 0.22 * v, to: 38, lp: 500, attack: 0.15 }); sfxNoise(1.2, 400, { type: 'lowpass', vol: 0.25 * v, attack: 0.2 }); },
+  blaze: dist => { const v = Math.max(0, 1 - dist / 30); for (let i = 0; i < 5; i++) sfxNoise(0.08, 1500 + Math.random() * 1500, { q: 2, vol: 0.2 * v, delay: i * 0.06 }); },
+  teleport: dist => { const v = Math.max(0.1, 1 - dist / 30); sfxTone(700, 0.35, { type: 'triangle', vol: 0.12 * v, to: 140 }); sfxTone(1000, 0.25, { vol: 0.06 * v, to: 300, delay: 0.05 }); },
+  scream: () => { sfxTone(900, 0.6, { type: 'sawtooth', vol: 0.1, to: 500, lp: 2000 }); sfxNoise(0.5, 3000, { q: 0.8, vol: 0.12 }); },
+  glassBreak: () => { for (const [f, d] of [[2600, 0], [3300, 0.04], [2900, 0.08]]) sfxTone(f, 0.1, { vol: 0.06, delay: d }); },
+  portal: () => { for (const [f, d] of [[220, 0], [330, 0.05], [440, 0.1]]) sfxTone(f, 0.9, { type: 'triangle', vol: 0.08, to: f * 1.5, delay: d, attack: 0.2 }); sfxNoise(0.8, 2000, { q: 0.5, vol: 0.12, attack: 0.3 }); },
   hit: () => { sfxNoise(0.08, 600, { vol: 0.5 }); sfxTone(130, 0.09, { type: 'square', vol: 0.1, to: 70, lp: 800 }); },
   hurt: () => { sfxTone(320, 0.2, { type: 'square', vol: 0.16, to: 150, lp: 1300 }); sfxNoise(0.1, 800, { vol: 0.3 }); },
   pop: () => sfxTone(520 + Math.random() * 140, 0.08, { vol: 0.16, to: 1150 }),
@@ -2727,6 +3558,18 @@ function sfxMob(type, kind, dist) {
   } else if (type === 'villager') {
     sfxTone(190 * p, 0.25, { type: 'sawtooth', vol: 0.09 * v, to: 150 * p, lp: 700, attack: 0.03 });
     sfxTone(170 * p, 0.2, { type: 'sawtooth', vol: 0.07 * v, to: 200 * p, lp: 700, delay: 0.22, attack: 0.03 });
+  } else if (type === 'ghast') {
+    sfxTone(kind === 'hurt' ? 1100 * p : 700 * p, 0.8, { type: 'sine', vol: 0.12 * v, to: 450 * p, attack: 0.1 });
+  } else if (type === 'blaze') {
+    sfxNoise(0.4, 900, { type: 'lowpass', vol: 0.2 * v }); sfxTone(220 * p, 0.3, { type: 'square', vol: 0.05 * v, lp: 600 });
+  } else if (type === 'enderman') {
+    sfxTone(160 * p, 0.5, { type: 'triangle', vol: 0.1 * v, to: kind === 'hurt' ? 400 : 110, lp: 900 });
+  } else if (type === 'piglin') {
+    sfxTone(130 * p, 0.3, { type: 'square', vol: 0.09 * v, to: 90 * p, lp: 600 }); sfxTone(120 * p, 0.25, { type: 'square', vol: 0.07 * v, to: 85 * p, lp: 600, delay: 0.3 });
+  } else if (type === 'dragon') {
+    sfx.roar(kind === 'hurt' ? 0.6 : 0.4);
+  } else if (type === 'crystal') {
+    sfxTone(1200, 0.2, { vol: 0.06 * v });
   } else if (type === 'creeper') {
     if (kind === 'hurt') sfxNoise(0.2, 1500, { type: 'highpass', vol: 0.2 * v });
   } else {
@@ -2753,7 +3596,7 @@ function raycast(maxDist, hitWater) {
   let n = [0, 0, 0], t = 0;
   while (t <= maxDist) {
     const id = getBlock(x, y, z);
-    if (id !== B.AIR && (id !== B.WATER || hitWater)) return { x, y, z, n, id, t };
+    if (id !== B.AIR && (!LIQUID[id] || hitWater)) return { x, y, z, n, id, t };
     if (tmx < tmy && tmx < tmz) { x += sx; t = tmx; tmx += tdx; n = [-sx, 0, 0]; }
     else if (tmy < tmz) { y += sy; t = tmy; tmy += tdy; n = [0, -sy, 0]; }
     else { z += sz; t = tmz; tmz += tdz; n = [0, 0, -sz]; }
@@ -2794,7 +3637,7 @@ function breakTime(id) {
   return Math.max(0.05, t);
 }
 const TIER_NAME = ['', '나무', '돌', '철', '다이아몬드'];
-const ckey = (x, y, z) => x + ',' + y + ',' + z;
+const ckey = (x, y, z) => (dim === 'overworld' ? '' : dim + ':') + x + ',' + y + ',' + z;
 // 주민 거래: 주민마다 5가지를 골라 가짐
 const TRADES = [
   [[I.WHEAT, 20], [I.EMERALD, 1]], [[I.COAL, 15], [I.EMERALD, 1]], [[I.LEATHER, 6], [I.EMERALD, 1]],
@@ -2857,6 +3700,7 @@ function openChestAt(x, y, z) {
   openInventory('chest');
 }
 function sleepAt(x, y, z) {
+  if (dim !== 'overworld') { setBlock(x, y, z, B.AIR); explode(x + 0.5, y + 0.5, z + 0.5, 3); toast('이 차원에서는 침대가 폭발합니다'); return; }
   spawnPoint = [x, y, z];
   scheduleSave();
   if (light >= 0.45) { toast('부활 위치를 이 침대로 정했습니다. 잠은 밤에만 잘 수 있습니다'); return; }
@@ -2885,6 +3729,7 @@ function breakBlockAt(hit) {
   setBlock(hit.x, hit.y, hit.z, fill);
   sfxBlock(hit.id, 'break');
   dropUnsupported(hit.x, hit.y, hit.z);
+  if (b.portal || hit.id === B.OBSIDIAN) breakPortalNear(hit.x, hit.y, hit.z);
   if (mode !== 'survival') return;
   const { it, harvest } = toolCheck(b);
   exhaust(0.005);
@@ -2898,6 +3743,7 @@ function blockDrops(id) {
   const b = BLOCKS[id];
   if (id === B.LEAVES) return Math.random() < 0.06 ? [[I.APPLE, 1]] : [];
   if (id === B.TALL_GRASS) return Math.random() < 0.15 ? [[I.SEEDS, 1]] : [];
+  if (id === B.GRAVEL) return Math.random() < 0.15 ? [[I.FLINT, 1]] : [[B.GRAVEL, 1]];
   if (b.crop !== undefined) return b.crop === 3 ? [[I.WHEAT, 1], [I.SEEDS, 1 + (Math.random() * 3 | 0)]] : [[I.SEEDS, 1]];
   const d = b.drop === undefined ? id : b.drop;
   return d ? [[d, 1]] : [];
@@ -2935,6 +3781,38 @@ function growCrops(dt) {
       if (b.crop + 1 >= 3) crops.delete(k);
     }
   }
+}
+// 양동이: 빈 양동이로 물/용암을 뜨고, 찬 양동이로 쏟음. 물과 용암이 만나면 흑요석
+function placeLiquid(x, y, z, id) {
+  if (BLOCKS[getBlock(x, y, z)].cross) popBlock(x, y, z);
+  const touches = t => DIRS6.some(([dx, dy, dz]) => getBlock(x + dx, y + dy, z + dz) === t);
+  if (id === B.LAVA && touches(B.WATER)) { setBlock(x, y, z, B.OBSIDIAN); sfx.fire(); return; }
+  setBlock(x, y, z, id);
+  if (id === B.WATER) for (const [dx, dy, dz] of DIRS6) if (getBlock(x + dx, y + dy, z + dz) === B.LAVA) { setBlock(x + dx, y + dy, z + dz, B.OBSIDIAN); sfx.fire(); }
+  sfxNoise(0.3, id === B.LAVA ? 500 : 1200, { type: 'lowpass', q: 0.4, vol: 0.3 });
+}
+function useBucket(s, info) {
+  const h = raycast(5, true);
+  if (!h) return;
+  if (info.bucket === B.AIR) {
+    if (!LIQUID[h.id]) return;
+    setBlock(h.x, h.y, h.z, B.AIR);
+    const full = h.id === B.WATER ? I.WATER_BUCKET : I.LAVA_BUCKET;
+    sfxNoise(0.25, 900, { type: 'lowpass', vol: 0.3 });
+    if (mode === 'creative') return;
+    if (--s.count <= 0) inv[selected] = { id: full, count: 1 };
+    else if (addItem(full, 1)) dropFromPlayer(full, 1);
+    refreshInvUI(); scheduleSave();
+    return;
+  }
+  let x = h.x, y = h.y, z = h.z;
+  if (!LIQUID[h.id]) { x += h.n[0]; y += h.n[1]; z += h.n[2]; }
+  const cur = getBlock(x, y, z);
+  if (cur !== B.AIR && !LIQUID[cur] && !BLOCKS[cur].cross) return;
+  if (info.bucket === B.WATER && dim === 'nether') { sfx.fire(); toast('물이 순식간에 증발했습니다'); }
+  else placeLiquid(x, y, z, info.bucket);
+  if (mode !== 'creative') inv[selected] = { id: I.BUCKET, count: 1 };
+  refreshInvUI(); scheduleSave();
 }
 function attack(m) {
   const s = heldItem(), it = s ? ITEMS[s.id] : null;
@@ -2980,6 +3858,21 @@ function useItem() {
     return;
   }
   if (info.boat) { placeBoat(); return; }
+  if (info.bucket !== undefined) { useBucket(s, info); return; }
+  if (info.pearl) { throwPearl(); consumeSelected(); return; }
+  if (info.eye) {
+    if (hit && hit.id === B.EPF) {
+      setBlock(hit.x, hit.y, hit.z, B.EPF_EYE); consumeSelected(); sfx.portal();
+      checkEndPortal(hit.x, hit.y, hit.z);
+    } else if (dim === 'overworld') { throwEye(); consumeSelected(); }
+    else toast('여기서는 엔더의 눈이 방향을 찾지 못합니다');
+    return;
+  }
+  if (info.igniter) {
+    if (hit && tryLightPortal(hit.x + hit.n[0], hit.y + hit.n[1], hit.z + hit.n[2])) wearSelected(1);
+    else if (hit) { sfxNoise(0.08, 3000, { q: 3, vol: 0.3 }); toast('흑요석으로 틀(가로 4 × 세로 5)을 세우고 안쪽에 쓰세요'); }
+    return;
+  }
   if (info.tool === 'hoe') {
     if (hit && (hit.id === B.GRASS || hit.id === B.DIRT) && hit.n[1] === 1 && getBlock(hit.x, hit.y + 1, hit.z) === B.AIR) {
       setBlock(hit.x, hit.y, hit.z, B.FARMLAND); sfxBlock(B.DIRT, 'place'); wearSelected(1);
@@ -3748,7 +4641,11 @@ function confirmButton(id, run) {
 function newWorld(newMode) {
   SEED = (Math.random() * 1e9) | 0;
   mode = newMode;
-  edits.clear();
+  for (const m of Object.values(editsByDim)) m.clear();
+  dim = 'overworld'; edits = editsByDim.overworld;
+  endState.dragonDead = false; endState.crystalsGone.clear();
+  villageCache.clear(); fortressCache.clear(); strongholdCache.seed = null;
+  applyDimVisuals();
   for (const c of chunks.values()) disposeMeshes(c);
   chunks.clear(); lastCenter = null;
   while (mobs.length) removeMob(mobs[0]);
@@ -3806,8 +4703,34 @@ let worldTime = save && save.time != null ? save.time : DAY_LEN * 0.3;
 let light = 1;
 const daySky = new THREE.Color(0x88c0ff), nightSky = new THREE.Color(0x0b1026), duskSky = new THREE.Color(0xf29a5a);
 const waterFog = new THREE.Color(0x1d3f8a);
+const lavaFog = new THREE.Color(0xd8561a);
+function applyDimVisuals() {
+  const over = dim === 'overworld';
+  sun.visible = moon.visible = clouds.visible = over;
+}
 function updateSky(dt) {
   worldTime = (worldTime + dt) % DAY_LEN;
+  if (dim !== 'overworld') {
+    // 네더·엔드: 하늘빛이 없고 차원마다 고정된 밝기와 안개
+    const nether = dim === 'nether';
+    light = 1; skyDimNow = 15; ambientNow = nether ? 0.3 : 0.42;
+    if (nether) skyColor.setRGB(0.24, 0.05, 0.03); else skyColor.setRGB(0.05, 0.03, 0.08);
+    for (const m of tintedMats) m.color.setRGB(1, 1, 1);
+    for (const mob of mobs) {
+      const lv = brightnessAt(mob.pos.x, mob.pos.y + mob.h * 0.7, mob.pos.z);
+      const g = mob.hurt > 0 ? 0.35 : 1;
+      for (const m of mob.mats) m.color.setRGB(lv, lv * g, lv * g);
+    }
+    if (player.headInLava) { scene.fog.color.copy(lavaFog); scene.fog.near = 0.1; scene.fog.far = 2.5; }
+    else { scene.fog.color.copy(skyColor); scene.fog.near = nether ? 10 : 50; scene.fog.far = nether ? 72 : 150; }
+    scene.background = scene.fog.color;
+    for (const m of [solidMat, waterMat]) {
+      const u = m.uniforms;
+      u.skyDim.value = skyDimNow; u.ambient.value = ambientNow; u.fogColor.value.copy(scene.fog.color); u.fogNear.value = scene.fog.near; u.fogFar.value = scene.fog.far;
+    }
+    return;
+  }
+  ambientNow = 0.05;
   const ang = (worldTime / DAY_LEN) * Math.PI * 2;
   const h = Math.sin(ang);
   light = Math.max(0.22, Math.min(1, 0.5 + h * 1.2));
@@ -3828,7 +4751,10 @@ function updateSky(dt) {
   sun.visible = h > -0.15; moon.visible = h < 0.15;
   clouds.position.x = cp.x - ((cp.x + worldTime * 1.5) % 384);
   clouds.position.z = cp.z - (cp.z % 384);
-  if (player.headInWater) {
+  if (player.headInLava) {
+    scene.fog.color.copy(lavaFog); scene.background = scene.fog.color;
+    scene.fog.near = 0.1; scene.fog.far = 2.5;
+  } else if (player.headInWater) {
     scene.fog.color.copy(waterFog).multiplyScalar(light);
     scene.background = scene.fog.color;
     scene.fog.near = 0.1; scene.fog.far = 18;
@@ -3839,7 +4765,7 @@ function updateSky(dt) {
   }
   for (const m of [solidMat, waterMat]) {
     const u = m.uniforms;
-    u.skyDim.value = skyDimNow; u.fogColor.value.copy(scene.fog.color); u.fogNear.value = scene.fog.near; u.fogFar.value = scene.fog.far;
+    u.skyDim.value = skyDimNow; u.ambient.value = ambientNow; u.fogColor.value.copy(scene.fog.color); u.fogNear.value = scene.fog.near; u.fogFar.value = scene.fog.far;
   }
 }
 
@@ -3862,9 +4788,10 @@ function frame(now) {
     physics(dt);
     cursorSteer(dt);
     if (!ui) keyLook(dt);
+    portalTick(dt);
     player.invuln -= dt;
     if (mode === 'survival') hungerTick(dt);
-    if (mode === 'survival') cactusCheck();
+    if (mode === 'survival') { cactusCheck(); fireTick(dt); }
   }
   camera.position.set(player.pos.x, player.pos.y + EYE, player.pos.z);
   camera.rotation.set(player.pitch, player.yaw, 0);
@@ -3877,6 +4804,9 @@ function frame(now) {
     for (let i = mobs.length - 1; i >= 0; i--) if (mobs[i]) updateMob(mobs[i], dt);
     updateDrops(dt, clock);
     updateArrows(dt);
+    const boss = mobs.find(m => m.def.boss);
+    document.getElementById('bossbar').hidden = !boss;
+    if (boss) document.getElementById('bb-fill').style.width = (boss.hp / boss.def.hp * 100) + '%';
     updateTnts(dt);
     updateEffects(dt);
     growCrops(dt);
@@ -3888,7 +4818,7 @@ function frame(now) {
   if (showDebug) {
     const p = player.pos;
     infoEl.textContent = `${fps} fps  ${mode === 'survival' ? '서바이벌' : '크리에이티브'}${player.flying ? ' · 비행' : ''}\n` +
-      `XYZ ${p.x.toFixed(1)} / ${p.y.toFixed(1)} / ${p.z.toFixed(1)}\n${BIO_NAME[biomeAt(Math.floor(p.x), Math.floor(p.z))]}  몹 ${mobs.length}  ${light < 0.45 ? '밤' : '낮'}`;
+      `XYZ ${p.x.toFixed(1)} / ${p.y.toFixed(1)} / ${p.z.toFixed(1)}\n${dim === 'overworld' ? BIO_NAME[biomeAt(Math.floor(p.x), Math.floor(p.z))] + '  ' + (light < 0.45 ? '밤' : '낮') : dim === 'nether' ? '네더' : '엔드'}  몹 ${mobs.length}`;
   } else infoEl.textContent = '';
   renderer.render(scene, camera);
 }
@@ -3908,7 +4838,12 @@ selectSlot(0);
 updateHearts();
 setTimeout(() => {
   preload();
-  if (save && save.boats) for (const [x, y, z, yaw] of save.boats) spawnBoat(x, y, z, yaw);
+  if (save && save.boats) {
+    if (dim === 'overworld') for (const [x, y, z, yaw] of save.boats) spawnBoat(x, y, z, yaw);
+    else owBoats = save.boats;
+  }
+  applyDimVisuals();
+  if (dim === 'end') setupEndMobs();
   document.getElementById('loadmsg').textContent = save
     ? '저장된 월드를 불러왔습니다.'
     : '나무를 캐서 판자와 작업대를 만들고, 도구를 만들어 돌을 캐 보세요. 동굴은 어두우니 횃불(석탄 + 막대기)을 챙기세요. 밤과 어두운 곳에는 좀비가 나옵니다.';
