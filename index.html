@@ -316,7 +316,7 @@ const I = { STICK: 100, WOOD_PICK: 101, STONE_PICK: 102, WOOD_SWORD: 103, STONE_
   BLAZE_POWDER: 163, ENDER_PEARL: 164, EYE_OF_ENDER: 165,
   GHAST_TEAR: 166, NETHER_BRICK_ITEM: 167, REDSTONE: 168,
   STRING: 169, FISHING_ROD: 170, RAW_FISH: 171, COOKED_FISH: 172,
-  BOTTLE: 173, WATER_BOTTLE: 174, P_HEAL: 175, P_REGEN: 176, P_SPEED: 177, P_FIRE: 178, P_NIGHT: 179, P_STRENGTH: 180, P_JUMP: 181, SHEARS: 182, BONE_MEAL: 183, GOLDEN_APPLE: 184, COMPASS: 185, CLOCK: 186, SADDLE: 187, SHIELD: 188 };
+  BOTTLE: 173, WATER_BOTTLE: 174, P_HEAL: 175, P_REGEN: 176, P_SPEED: 177, P_FIRE: 178, P_NIGHT: 179, P_STRENGTH: 180, P_JUMP: 181, SHEARS: 182, BONE_MEAL: 183, GOLDEN_APPLE: 184, COMPASS: 185, CLOCK: 186, SADDLE: 187, SHIELD: 188, SLIMEBALL: 189 };
 // 갑옷: 132부터 [가죽, 철, 다이아몬드] × [투구, 흉갑, 레깅스, 부츠]
 const ARMOR_SET = [['leather', '가죽', 5, [1, 3, 2, 1]], ['iron', '철', 15, [2, 6, 5, 2]], ['diamond', '다이아몬드', 33, [3, 8, 6, 3]]];
 const ARMOR_PART = ['투구', '흉갑', '레깅스', '부츠'], ARMOR_BASE_DUR = [11, 16, 15, 13], ARMOR_COST = [5, 8, 7, 4];
@@ -558,6 +558,7 @@ ITEMS[I.NETHER_BRICK_ITEM] = { name: '네더 벽돌 조각', stack: 64 };
 ITEMS[I.REDSTONE] = { name: '레드스톤 가루', stack: 64, placeAs: B.DUST_OFF };
 ITEMS[I.STRING] = { name: '실', stack: 64 };
 ITEMS[I.GOLDEN_APPLE] = { name: '황금 사과', stack: 64, food: 4, sat: 9.6, regen: 10 };
+ITEMS[I.SLIMEBALL] = { name: '슬라임 볼', stack: 64 };
 ITEMS[I.SHIELD] = { name: '방패', stack: 1, dur: 336, shield: true };
 ITEMS[I.SADDLE] = { name: '안장', stack: 1 };
 ITEMS[I.COMPASS] = { name: '나침반', stack: 1, gadget: 'compass' };
@@ -630,6 +631,7 @@ RECIPES.push(
   { out: [B.ENCH_TABLE, 1], in: [[I.DIAMOND, 2], [B.OBSIDIAN, 4], [I.LEATHER, 3]], table: true },
   { out: [B.LEVER_OFF, 1], in: [[I.STICK, 1], [B.COBBLE, 1]] },
   { out: [B.PISTON + 3, 1], in: [[B.PLANKS, 3], [B.COBBLE, 4], [I.IRON_INGOT, 1], [I.REDSTONE, 1]], table: true },
+  { out: [B.STICKY + 3, 1], in: [[B.PISTON + 3, 1], [I.SLIMEBALL, 1]] },
   { out: [B.STICKY + 3, 1], in: [[B.PISTON + 3, 1], [I.FLESH, 1]] },
   { out: [I.FISHING_ROD, 1], in: [[I.STICK, 3], [I.STRING, 2]], table: true },
   { out: [I.BOTTLE, 3], in: [[B.GLASS, 3]] },
@@ -669,7 +671,7 @@ const FUEL = [[I.COAL, 8], [B.PLANKS, 1.5], [B.LOG, 1.5], [B.BIRCH_LOG, 1.5], [I
 const CREATIVE_ITEMS = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.SAND, B.LOG, B.PLANKS, B.LEAVES, B.GLASS, B.BRICK, B.SNOW, B.TABLE, B.FURNACE, B.TORCH, B.CHEST, B.BED, B.WOOL, B.TNT, B.BEDROCK,
   B.SANDSTONE, B.BIRCH_LOG, B.STONE_BRICK, B.PLANK_SLAB, B.COBBLE_SLAB, B.STONE_SLAB, B.PLANK_STAIRS, B.COBBLE_STAIRS, B.FENCE, B.ICE, B.CACTUS, B.FLOWER_RED, B.FLOWER_YELLOW,
   B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.IRON_BLOCK, B.GOLD_BLOCK, B.DIAMOND_BLOCK,
-  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, I.GOLDEN_APPLE, I.COMPASS, I.CLOCK, I.SADDLE, I.SHIELD, ...WOOL_COLORS.map((_, k) => B.CWOOL + k), I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
+  I.STICK, I.COAL, I.IRON_INGOT, I.GOLD_INGOT, I.DIAMOND, ...TOOL_SET.flatMap(t => t[3]), I.APPLE, I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH, I.STRING, I.FISHING_ROD, I.RAW_FISH, I.COOKED_FISH, B.BREW_STAND, I.SHEARS, I.BONE_MEAL, I.GOLDEN_APPLE, I.COMPASS, I.CLOCK, I.SADDLE, I.SHIELD, I.SLIMEBALL, ...WOOL_COLORS.map((_, k) => B.CWOOL + k), I.BOTTLE, I.WATER_BOTTLE, ...POTIONS.map(p => p[0]),
   I.LEATHER, I.BONE, I.GUNPOWDER, ...Array.from({ length: 12 }, (_, i) => 132 + i),
   I.SEEDS, I.WHEAT, I.BREAD, I.BOW, I.ARROW, I.WOOD_HOE, I.STONE_HOE, I.IRON_HOE, I.DIA_HOE, I.DOOR, I.BOAT, I.EMERALD,
   B.PISTON + 3, B.STICKY + 3, B.REDSTONE_ORE, B.LEVER_OFF, B.BUTTON_OFF, B.PLATE_OFF, B.RS_TORCH, B.LAMP_OFF, B.REDSTONE_BLOCK, I.REDSTONE,
@@ -1904,6 +1906,8 @@ function drawItemIcon(g, id) {
       else g.fillStyle = 'rgba(210,230,245,.35)', g.fillRect(x * 2, y * 2, 2, 2);
     }
     if (liquid) px(6, 9, [255, 255, 255], 0);
+  } else if (id === I.SLIMEBALL) {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = Math.hypot(x - 7.5, y - 8); if (d < 5) px(x, y, d < 3 && x < 7 && y < 8 ? [170, 240, 150] : [100, 190, 80], 16); }
   } else if (id === I.SHIELD) {
     for (let y = 1; y < 15; y++) for (let x = 3; x < 13; x++) {
       if (y > 10 && Math.abs(x - 7.5) > 15 - y) continue;
@@ -2889,6 +2893,9 @@ const MOBTEX = {
   saddle: makeCanvasTex(4, 4, (x, y) => y === 0 ? [90, 50, 26] : [130, 76, 40], 40),
   golem: makeCanvasTex(8, 8, (x, y) => (x * 3 + y * 7) % 9 === 0 ? [150, 144, 132] : (x + y * 5) % 13 === 0 ? [90, 120, 60] : [206, 198, 184], 41),
   golemFace: makeCanvasTex(8, 8, (x, y) => (y === 3 && (x === 2 || x === 5)) ? [140, 30, 20] : (y >= 4 && y <= 6 && x >= 3 && x <= 4) ? [180, 170, 156] : [206, 198, 184], 42),
+  slime: makeCanvasTex(8, 8, (x, y) => (x + y * 3) % 7 === 0 ? [96, 180, 80] : [120, 204, 100], 43),
+  slimeCore: makeCanvasTex(4, 4, (x, y) => [70, 150, 60], 44),
+  slimeEye: makeCanvasTex(2, 2, () => [20, 40, 20], 45),
   wSkin: makeCanvasTex(8, 8, (x, y) => (x * 3 + y) % 7 === 0 ? [170, 166, 160] : [214, 210, 204], 33),
   wFace: makeCanvasTex(8, 8, (x, y) => (y === 3 && (x === 1 || x === 6)) ? [30, 30, 30] : (y >= 5 && x >= 3 && x <= 4) ? [40, 36, 34] : [214, 210, 204], 34),
   collar: makeCanvasTex(2, 2, () => [200, 30, 30], 35),
@@ -2974,6 +2981,7 @@ const MOB = {
   wolf:     { hp: 8, hw: 0.3, h: 0.85, speed: 2.8, neutral: true, melee: true, dmg: 3, drops: [] },
   zombie:   { hp: 20, hw: 0.3, h: 1.95, speed: 2.4, burns: true, melee: true, dmg: 3, drops: [[I.FLESH, 0, 2]] },
   skeleton: { hp: 20, hw: 0.3, h: 1.95, speed: 2.2, burns: true, drops: [[I.BONE, 0, 2], [I.ARROW, 0, 2]] },
+  slime:    { hp: 16, hw: 1.0, h: 2.0, speed: 3, slime: true, drops: [] },
   creeper:  { hp: 20, hw: 0.3, h: 1.7, speed: 2.1, drops: [[I.GUNPOWDER, 0, 2]] },
   villager: { hp: 20, hw: 0.3, h: 1.95, passive: true, speed: 0.7, drops: [], village: true },
   piglin:   { hp: 20, hw: 0.3, h: 1.95, speed: 2.3, neutral: true, melee: true, dmg: 5, fireproof: true, drops: [[I.FLESH, 0, 1], [I.GOLD_INGOT, 0, 1]] },
@@ -2985,7 +2993,7 @@ const MOB = {
   spider:   { hp: 16, hw: 0.65, h: 0.9, speed: 2.9, melee: true, dmg: 2, dayNeutral: true, climbs: true, drops: [[I.STRING, 0, 2]] },
 };
 const HOSTILE = ['zombie', 'zombie', 'zombie', 'skeleton', 'skeleton', 'creeper', 'creeper', 'enderman', 'spider', 'spider'];
-const MOB_NAME = { golem: '철 골렘', zombie: '좀비', piglin: '좀비 피글린', enderman: '엔더맨', spider: '거미', wolf: '늑대' };
+const MOB_NAME = { slime: '슬라임', golem: '철 골렘', zombie: '좀비', piglin: '좀비 피글린', enderman: '엔더맨', spider: '거미', wolf: '늑대' };
 const MEATS = new Set([I.PORK, I.COOKED_PORK, I.BEEF, I.STEAK, I.MUTTON, I.COOKED_MUTTON, I.FLESH]);
 function buildMobModel(type) {
   const g = new THREE.Group(), legs = [], arms = [], mats = [];
@@ -3075,6 +3083,11 @@ function buildMobModel(type) {
     box(8, 4, 4, robe, 0, 19, 4); // 팔짱
     box(8, 10, 8, faced(skin, face), 0, 29, 0);
     box(2, 4, 2, skin, 0, 26, 5); // 코
+  } else if (type === 'slime') {
+    const core = mat(MOBTEX.slimeCore), eye = mat(MOBTEX.slimeEye);
+    const jelly = new THREE.MeshBasicMaterial({ map: MOBTEX.slime, transparent: true, opacity: 0.6, depthWrite: false }); mats.push(jelly);
+    box(8, 8, 8, core, 0, 12, 0); box(3, 3, 1, eye, -3, 20, 8); box(3, 3, 1, eye, 3, 20, 8); box(2, 1, 1, eye, 1, 14, 8);
+    box(32, 32, 32, jelly, 0, 16, 0);
   } else if (type === 'horse') {
     const variant = Math.random() * 3 | 0, skin = mat(MOBTEX['horse' + variant]), mane = mat(MOBTEX.mane), sad = mat(MOBTEX.saddle);
     g.userData.variant = variant;
@@ -3161,6 +3174,12 @@ function hurtMob(m, dmg, dir) {
       if (n) spawnDrop(id, n, c.x, c.y + 0.6, c.z);
     }
     removeMob(m);
+    if (m.def.slime) {
+      if (m.size > 1) for (let n = 2 + (Math.random() * 3 | 0); n > 0; n--) {
+        const c2 = spawnMob('slime', c.x + (Math.random() - 0.5) * m.hw, c.y + 0.3, c.z + (Math.random() - 0.5) * m.hw);
+        setSlimeSize(c2, m.size - 1); c2.vel.set((Math.random() - 0.5) * 3, 4, (Math.random() - 0.5) * 3);
+      } else if (Math.random() < 0.6) spawnDrop(I.SLIMEBALL, 1 + (Math.random() * 2 | 0), c.x, c.y + 0.3, c.z);
+    }
     if (m.type === 'crystal') { endState.crystalsGone.add(m.pillar); scheduleSave(); explode(c.x, c.y + 0.5, c.z, 3); }
     else spawnOrbs(c.x, c.y + 0.5, c.z, m.def.boss ? 300 : m.def.passive ? 1 + (Math.random() * 3 | 0) : 5);
     if (m.def.boss) dragonDefeated();
@@ -3281,6 +3300,44 @@ function lineOfSight(a, b) {
   return true;
 }
 const wrapAngle = a => Math.atan2(Math.sin(a), Math.cos(a));
+// 슬라임: 크기 3/2/1. 통통 튀며 다가오고, 죽으면 작은 슬라임 여러 마리로 나뉨
+function setSlimeSize(m, size) {
+  const k = size === 3 ? 1 : size === 2 ? 0.5 : 0.26;
+  m.size = size; m.hp = size === 3 ? 16 : size === 2 ? 4 : 1; m.hw = 1.0 * k; m.h = 2.0 * k;
+  m.g.scale.setScalar(k); m.jumpT = 0.5 + Math.random();
+  return m;
+}
+function updateSlime(m, dt, dist, dxp, dyp, dzp) {
+  if (!m.size) setSlimeSize(m, 3);
+  if (dist > 90) { removeMob(m); return; }
+  const hunting = mode === 'survival' && !player.dead && dist < 16;
+  if (m.onGround) {
+    m.vel.x *= Math.pow(0.001, dt); m.vel.z *= Math.pow(0.001, dt);
+    m.jumpT -= dt;
+    if (m.jumpT <= 0) {
+      m.jumpT = (hunting ? 0.8 : 2) + Math.random() * 1.5;
+      m.yaw = hunting ? Math.atan2(dxp, dzp) : Math.random() * Math.PI * 2;
+      const sp = m.def.speed * (0.6 + m.size * 0.2);
+      m.vel.set(Math.sin(m.yaw) * sp, 6 + m.size, Math.cos(m.yaw) * sp);
+      if (dist < 20) sfxTone(200 / m.size + 80, 0.12, { type: 'sine', vol: 0.06 * m.size, to: 120 / m.size + 40 });
+    }
+  }
+  const inBlock = getBlock(Math.floor(m.pos.x), Math.floor(m.pos.y + 0.3), Math.floor(m.pos.z));
+  if (inBlock === B.WATER) m.vel.y = Math.min(m.vel.y + 30 * dt, 2);
+  else m.vel.y = Math.max(m.vel.y - 25 * dt, -40);
+  const wasAir = !m.onGround;
+  moveEntity(m, dt);
+  if (wasAir && m.onGround) { m.squash = 0.25; if (dist < 16) sfxNoise(0.1, 500, { type: 'lowpass', vol: 0.08 * m.size }); }
+  // 몸에 닿으면 공격 (가장 작은 슬라임은 무해)
+  if (m.size > 1 && hunting && dist < m.hw + 0.5 && dyp > -0.5 && dyp < m.h && m.attackCd <= 0) {
+    damagePlayer(m.size === 3 ? 4 : 2, { x: dxp / (dist || 1), z: dzp / (dist || 1) }, '슬라임에게 당했습니다');
+    m.attackCd = 1; wolvesDefend(m);
+  }
+  m.squash = Math.max(0, (m.squash || 0) - dt);
+  const k = m.size === 3 ? 1 : m.size === 2 ? 0.5 : 0.26, sq = m.squash * 1.6, st = !m.onGround ? 0.12 : 0;
+  m.g.scale.set(k * (1 + sq - st * 0.5), k * (1 - sq + st), k * (1 + sq - st * 0.5));
+  m.g.position.copy(m.pos); m.g.rotation.y = m.yaw;
+}
 // 말 타기: 길들이고 안장을 얹은 말은 조종, 아니면 제멋대로 날뜀
 function rideHorse(m, dt) {
   let move = 0;
@@ -3338,6 +3395,7 @@ function updateMob(m, dt) {
   if (m.breedCd > 0) m.breedCd -= dt;
   if (m.sheared > 0) { m.sheared -= dt; if (m.sheared <= 0) { m.sheared = 0; m.g.userData.wool.visible = true; } }
   if (m.def.flying) { updateFlyer(m, dt, dist); return; }
+  if (m.def.slime) { updateSlime(m, dt, dist, dxp, dyp, dzp); return; }
   // 엔더맨은 눈을 마주치면 화남
   if (m.type === 'enderman' && !m.angry && mode === 'survival' && dist < 30 && (m.lookT = (m.lookT || 0) + dt) > 0.3) {
     m.lookT = 0;
@@ -4019,7 +4077,13 @@ function spawnTick(dt) {
     const y = 2 + (Math.random() * Math.min(CH - 5, player.pos.y + 14) | 0);
     if (!chunkReady(x, z) || getBlock(x, y, z) !== B.AIR || getBlock(x, y + 1, z) !== B.AIR || !SOLID[getBlock(x, y - 1, z)]) return;
     const c = chunkOf(x, z), i = vidx(x - c.cx * CS, y, z - c.cz * CS);
-    if (c.sky[i] < 5 && c.blk[i] < 7) spawnMob(pick(HOSTILE), x + 0.5, y, z + 0.5);
+    // 슬라임은 몇몇 청크의 깊은 곳(높이 40 아래)에서만 생김
+    const slimeChunk = hash2(Math.floor(x / CS), Math.floor(z / CS), 501) < 0.2;
+    if (c.sky[i] < 5 && c.blk[i] < 7) {
+      if (slimeChunk && y < 40 && Math.random() < 0.5) {
+        if (getBlock(x + 1, y, z) === B.AIR && getBlock(x, y, z + 1) === B.AIR && getBlock(x, y + 2, z) === B.AIR) setSlimeSize(spawnMob('slime', x + 0.5, y, z + 0.5), 1 + (Math.random() * 3 | 0));
+      } else spawnMob(pick(HOSTILE), x + 0.5, y, z + 0.5);
+    }
   }
 }
 
@@ -4157,6 +4221,8 @@ function sfxMob(type, kind, dist) {
   } else if (type === 'wolf') {
     if (kind === 'hurt') sfxTone(700 * p, 0.15, { type: 'triangle', vol: 0.12 * v, to: 500 * p });
     else { sfxTone(420 * p, 0.08, { type: 'square', vol: 0.08 * v, lp: 1200 }); sfxTone(380 * p, 0.1, { type: 'square', vol: 0.08 * v, lp: 1200, delay: 0.15 }); }
+  } else if (type === 'slime') {
+    sfxNoise(0.15, 400, { type: 'lowpass', vol: 0.25 * v });
   } else if (type === 'spider') {
     for (let i = 0; i < 3; i++) sfxNoise(0.06, 1800 + Math.random() * 800, { q: 3, vol: 0.2 * v, delay: i * 0.09 });
   } else if (type === 'creeper') {
